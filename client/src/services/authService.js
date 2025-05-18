@@ -114,6 +114,16 @@ class AuthService {
     
     return response.data;
   }
+  
+  /**
+   * Получает список устройств пользователя
+   * @param {string} userId - ID пользователя
+   * @returns {Promise<Array>} - Массив устройств пользователя
+   */
+  async getUserDevices(userId) {
+    const response = await apiClient.get(`/users/${userId}/devices`);
+    return response.data;
+  }
 }
 
 export default new AuthService(); 

@@ -120,7 +120,7 @@ const HomePage = () => {
         )}
       </section>
 
-      <style jsx>{`
+      <style>{`
         .home-page {
           padding-bottom: 30px;
         }

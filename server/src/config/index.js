@@ -16,7 +16,7 @@ module.exports = {
   
   // Настройки JWT
   jwt: {
-    secret: process.env.JWT_SECRET || 'your_jwt_secret_key', //a128d3dc-58b2-4e73-b7bf-68fb4c8e7123
+    secret: process.env.JWT_SECRET || 'a128d3dc-58b2-4e73-b7bf-68fb4c8e7123',
     expiresIn: process.env.JWT_EXPIRES_IN || '24h',
   },
   

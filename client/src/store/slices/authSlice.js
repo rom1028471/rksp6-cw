@@ -8,7 +8,17 @@ export const registerUser = createAsyncThunk(
     try {
       return await authService.register(userData);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Ошибка регистрации');
+      // Обработка сетевой ошибки
+      if (error.code === 'ERR_NETWORK') {
+        return rejectWithValue({
+          message: 'Ошибка соединения с сервером. Пожалуйста, проверьте подключение к интернету или убедитесь, что сервер запущен.',
+          status: error.code
+        });
+      }
+      return rejectWithValue({
+        message: error.response?.data?.message || 'Ошибка регистрации',
+        status: error.response?.status
+      });
     }
   }
 );
@@ -19,7 +29,17 @@ export const loginUser = createAsyncThunk(
     try {
       return await authService.login(credentials);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Ошибка входа');
+      // Обработка сетевой ошибки
+      if (error.code === 'ERR_NETWORK') {
+        return rejectWithValue({
+          message: 'Ошибка соединения с сервером. Пожалуйста, проверьте подключение к интернету или убедитесь, что сервер запущен.',
+          status: error.code
+        });
+      }
+      return rejectWithValue({
+        message: error.response?.data?.message || 'Ошибка входа',
+        status: error.response?.status
+      });
     }
   }
 );
@@ -63,12 +83,26 @@ export const updateUserProfile = createAsyncThunk(
   }
 );
 
+export const fetchUserDevices = createAsyncThunk(
+  'auth/fetchUserDevices',
+  async (_, { getState, rejectWithValue }) => {
+    try {
+      const { user } = getState().auth;
+      if (!user) return [];
+      return await authService.getUserDevices(user.id);
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Ошибка получения устройств');
+    }
+  }
+);
+
 // Начальное состояние
 const initialState = {
   user: null,
   token: null,
   isAuthenticated: false,
   loading: false,
+  devices: [],
   error: null,
 };
 
@@ -97,7 +131,7 @@ const authSlice = createSlice({
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload.message || 'Произошла неизвестная ошибка';
       })
       
       // Обработка состояния входа
@@ -113,7 +147,7 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload.message || 'Произошла неизвестная ошибка';
       })
       
       // Обработка состояния выхода
@@ -148,6 +182,19 @@ const authSlice = createSlice({
       // Обработка обновления профиля
       .addCase(updateUserProfile.fulfilled, (state, action) => {
         state.user = action.payload;
+      })
+      
+      // Обработка получения устройств пользователя
+      .addCase(fetchUserDevices.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchUserDevices.fulfilled, (state, action) => {
+        state.loading = false;
+        state.devices = action.payload;
+      })
+      .addCase(fetchUserDevices.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });

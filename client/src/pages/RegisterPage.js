@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { registerUser, clearError } from '../store/slices/authSlice';
-import { FaHeadphones, FaUser, FaEnvelope, FaLock } from 'react-icons/fa';
+import { FaHeadphones, FaUser, FaEnvelope, FaLock, FaExclamationTriangle } from 'react-icons/fa';
 
 const RegisterPage = () => {
   const dispatch = useDispatch();
@@ -50,9 +50,13 @@ const RegisterPage = () => {
       return;
     }
     
-    // Отправляем данные без confirmPassword
-    const { confirmPassword, ...registerData } = userData;
-    await dispatch(registerUser(registerData));
+    try {
+      // Отправляем данные без confirmPassword
+      const { confirmPassword, ...registerData } = userData;
+      await dispatch(registerUser(registerData)).unwrap();
+    } catch (err) {
+      console.error("Registration error:", err);
+    }
   };
 
   return (
@@ -65,6 +69,7 @@ const RegisterPage = () => {
         
         {error && (
           <div className="alert alert-danger">
+            <FaExclamationTriangle style={{ marginRight: '8px' }} />
             {error}
           </div>
         )}
@@ -160,7 +165,7 @@ const RegisterPage = () => {
         </div>
       </div>
       
-      <style jsx>{`
+      <style>{`
         .auth-page {
           display: flex;
           align-items: center;
@@ -244,6 +249,17 @@ const RegisterPage = () => {
         
         .w-100 {
           width: 100%;
+        }
+        
+        .alert-danger {
+          display: flex;
+          align-items: center;
+          background-color: #f8d7da;
+          color: #721c24;
+          padding: 12px;
+          border-radius: 4px;
+          margin-bottom: 20px;
+          font-size: 14px;
         }
       `}</style>
     </div>

@@ -306,7 +306,7 @@ const TracksPage = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .tracks-page {
           padding-bottom: 40px;
         }

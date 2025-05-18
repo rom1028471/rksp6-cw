@@ -58,7 +58,7 @@ const Navbar = () => {
         </div>
       </div>
       
-      <style jsx>{`
+      <style>{`
         .navbar {
           background-color: #343a40;
           color: white;

@@ -274,7 +274,7 @@ const Player = () => {
         />
       </div>
 
-      <style jsx>{`
+      <style>{`
         .player-inner {
           display: flex;
           align-items: center;

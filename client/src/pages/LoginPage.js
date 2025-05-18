@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { loginUser, clearError } from '../store/slices/authSlice';
-import { FaHeadphones, FaUser, FaLock } from 'react-icons/fa';
+import { FaHeadphones, FaUser, FaLock, FaExclamationTriangle } from 'react-icons/fa';
 
 const LoginPage = () => {
   const dispatch = useDispatch();
@@ -29,12 +29,17 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await dispatch(loginUser({
-      ...credentials,
-      deviceId,
-      deviceName,
-      deviceType
-    }));
+    
+    try {
+      await dispatch(loginUser({
+        ...credentials,
+        deviceId,
+        deviceName,
+        deviceType
+      })).unwrap();
+    } catch (err) {
+      console.error("Login error:", err);
+    }
   };
 
   return (
@@ -47,6 +52,7 @@ const LoginPage = () => {
         
         {error && (
           <div className="alert alert-danger">
+            <FaExclamationTriangle style={{ marginRight: '8px' }} />
             {error}
           </div>
         )}
@@ -101,7 +107,7 @@ const LoginPage = () => {
         </div>
       </div>
       
-      <style jsx>{`
+      <style>{`
         .auth-page {
           display: flex;
           align-items: center;
@@ -173,6 +179,17 @@ const LoginPage = () => {
         
         .w-100 {
           width: 100%;
+        }
+        
+        .alert-danger {
+          display: flex;
+          align-items: center;
+          background-color: #f8d7da;
+          color: #721c24;
+          padding: 12px;
+          border-radius: 4px;
+          margin-bottom: 20px;
+          font-size: 14px;
         }
       `}</style>
     </div>

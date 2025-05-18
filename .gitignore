@@ -25,10 +25,15 @@ logs/
 /client/build/
 /client/dist/
 /server/dist/
+/client/coverage/
 
 # Кэш
 .npm
 .eslintcache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
 
 # Файлы ОС
 .DS_Store
@@ -52,4 +57,5 @@ coverage/
 .nyc_output/
 temp/
 .tmp/
-.cache/ 
+.cache/
+storybook-static/ 
