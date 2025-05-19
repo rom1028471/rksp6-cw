@@ -1,8 +1,8 @@
 module.exports = (sequelize, DataTypes) => {
   const Playlist = sequelize.define('Playlist', {
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
       primaryKey: true,
     },
     name: {
@@ -16,39 +16,37 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    coverPath: {
+    cover_path: {
       type: DataTypes.STRING,
       allowNull: true,
+      field: 'cover_path',
     },
-    isPublic: {
+    is_public: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
-    },
-    isLoop: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
+      field: 'is_public',
     },
     userId: {
-      type: DataTypes.UUID,
+      type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
-        model: 'Users',
-        key: 'id',
-      },
+      field: 'user_id',
     },
+  }, {
+    tableName: 'playlists',
+    underscored: true,
   });
 
   // Ассоциации с другими моделями
   Playlist.associate = (models) => {
     Playlist.belongsTo(models.User, {
-      foreignKey: 'userId',
+      foreignKey: 'user_id',
       as: 'user',
     });
     
     Playlist.belongsToMany(models.Track, {
-      through: 'PlaylistTracks',
-      foreignKey: 'playlistId',
-      otherKey: 'trackId',
+      through: 'playlist_tracks',
+      foreignKey: 'playlist_id',
+      otherKey: 'track_id',
       as: 'tracks',
     });
   };

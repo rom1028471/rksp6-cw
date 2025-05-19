@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateUserProfile, fetchUserDevices } from '../store/slices/authSlice';
 import { FaUser, FaLaptop, FaMobile, FaTablet, FaDesktop, FaTrash } from 'react-icons/fa';
 
 const ProfilePage = () => {
   const dispatch = useDispatch();
-  const { user, devices, loading, error } = useSelector((state) => state.auth);
+  const { user, devices, loading, error, lastDevicesRequestTime } = useSelector((state) => state.auth);
+  const devicesRequestRef = useRef(false);
+  const initialRenderRef = useRef(true);
   
   const [formData, setFormData] = useState({
     username: '',
@@ -18,19 +20,60 @@ const ProfilePage = () => {
   const [formMode, setFormMode] = useState('view'); // view, edit, password
   const [formError, setFormError] = useState(null);
   const [formSuccess, setFormSuccess] = useState(null);
+  const [localDevices, setLocalDevices] = useState([]);
   
+  // Инициализация формы только при первом рендере или изменении пользователя
   useEffect(() => {
     if (user) {
-      setFormData({
-        ...formData,
+      setFormData(prevData => ({
+        ...prevData,
         username: user.username,
         email: user.email,
-      });
-      
-      // Загрузить устройства пользователя
-      dispatch(fetchUserDevices());
+      }));
     }
-  }, [user, dispatch]);
+  }, [user]);
+  
+  // Отдельный эффект для загрузки устройств - выполняется только один раз
+  useEffect(() => {
+    // Используем localDevices, если уже есть данные из редьюсера
+    if (devices && devices.length > 0) {
+      setLocalDevices(devices);
+      return;
+    }
+    
+    // Запрашиваем устройства только один раз при первом рендере
+    if (initialRenderRef.current && user && !devicesRequestRef.current) {
+      initialRenderRef.current = false;
+      
+      const now = Date.now();
+      const shouldFetchDevices = 
+        (!devices || devices.length === 0) && 
+        (!lastDevicesRequestTime || (now - lastDevicesRequestTime > 300000)); // 5 минут
+      
+      if (shouldFetchDevices) {
+        console.log('Загружаем устройства пользователя');
+        devicesRequestRef.current = true;
+        
+        // Запрос с большей задержкой, чтобы дать время другим компонентам загрузиться
+        setTimeout(() => {
+          dispatch(fetchUserDevices())
+            .then((result) => {
+              if (result.payload) {
+                setLocalDevices(result.payload);
+              }
+            })
+            .catch((err) => {
+              console.error('Ошибка загрузки устройств:', err);
+              // Установим пустой массив, чтобы не пытаться повторно загрузить
+              setLocalDevices([]);
+            })
+            .finally(() => {
+              devicesRequestRef.current = false;
+            });
+        }, 1000);
+      }
+    }
+  }, [user, devices, dispatch, lastDevicesRequestTime]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -286,9 +329,9 @@ const ProfilePage = () => {
             <h2>Активные устройства</h2>
           </div>
           
-          {devices && devices.length > 0 ? (
+          {localDevices && localDevices.length > 0 ? (
             <div className="devices-list">
-              {devices.map(device => (
+              {localDevices.map(device => (
                 <div key={device.id} className="device-item">
                   <div className="device-icon">
                     {getDeviceIcon(device.deviceType)}

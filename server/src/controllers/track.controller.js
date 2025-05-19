@@ -9,15 +9,42 @@ class TrackController {
    */
   async createTrack(req, res, next) {
     try {
+      console.log('Получен запрос на создание трека:');
+      console.log('Body:', req.body);
+      console.log('Files:', req.files ? Object.keys(req.files) : 'No files');
+      
       const trackData = {
         ...req.body,
         userId: req.user.id,
       };
       
-      const audioFile = req.files?.audio?.[0];
-      const coverFile = req.files?.cover?.[0];
+      // Проверяем наличие файлов
+      if (!req.files) {
+        console.error('Ошибка: Файлы не загружены');
+        return res.status(400).json({ message: 'Файлы не загружены' });
+      }
+      
+      const audioFile = req.files.audio ? req.files.audio[0] : null;
+      const coverFile = req.files.cover ? req.files.cover[0] : null;
+      
+      console.log('Audio file:', audioFile ? {
+        fieldname: audioFile.fieldname,
+        originalname: audioFile.originalname,
+        mimetype: audioFile.mimetype,
+        size: audioFile.size,
+        path: audioFile.path
+      } : 'Not provided');
+      
+      console.log('Cover file:', coverFile ? {
+        fieldname: coverFile.fieldname,
+        originalname: coverFile.originalname,
+        mimetype: coverFile.mimetype,
+        size: coverFile.size,
+        path: coverFile.path
+      } : 'Not provided');
       
       if (!audioFile) {
+        console.error('Ошибка: Аудио файл не загружен');
         return res.status(400).json({ message: 'Аудио файл не загружен' });
       }
       
@@ -25,6 +52,7 @@ class TrackController {
       
       res.status(201).json(track);
     } catch (error) {
+      console.error('Ошибка создания трека:', error);
       next(error);
     }
   }

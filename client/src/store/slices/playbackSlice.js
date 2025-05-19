@@ -1,15 +1,16 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import playbackService from '../../services/playbackService';
+import axios from 'axios';
 
 // Асинхронные действия
 export const updatePlaybackPosition = createAsyncThunk(
   'playback/updatePosition',
-  async (playbackData, { rejectWithValue }) => {
+  async (positionData, { rejectWithValue }) => {
     try {
-      const result = await playbackService.updatePosition(playbackData);
-      return result;
+      const response = await axios.post('/api/playback/position', positionData);
+      return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Ошибка обновления позиции');
+      return rejectWithValue(error.response?.data || 'Ошибка при обновлении позиции');
     }
   }
 );
@@ -74,6 +75,32 @@ export const getUserActiveDevices = createAsyncThunk(
   }
 );
 
+// Async thunk для получения позиции воспроизведения
+export const fetchPlaybackPosition = createAsyncThunk(
+  'playback/fetchPosition',
+  async ({ userId, deviceId }, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`/api/playback/position?userId=${userId}&deviceId=${deviceId}`);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || 'Ошибка при получении позиции');
+    }
+  }
+);
+
+// Async thunk для получения позиций всех устройств
+export const fetchAllDevicesPositions = createAsyncThunk(
+  'playback/fetchAllDevices',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get('/api/playback/devices');
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || 'Ошибка при получении данных устройств');
+    }
+  }
+);
+
 // Начальное состояние
 const initialState = {
   history: [],
@@ -91,6 +118,11 @@ const initialState = {
     currentPage: 1,
     totalPages: 0,
   },
+  devicePositions: [],
+  lastSyncTime: null,
+  updateStatus: 'idle', // 'idle', 'loading', 'succeeded', 'failed'
+  fetchStatus: 'idle',
+  syncEnabled: true
 };
 
 // Создание слайса
@@ -108,17 +140,25 @@ const playbackSlice = createSlice({
         error: null,
       };
     },
+    toggleSync(state) {
+      state.syncEnabled = !state.syncEnabled;
+    },
+    setLastSyncTime(state, action) {
+      state.lastSyncTime = action.payload;
+    }
   },
   extraReducers: (builder) => {
     builder
-      // Обработка обновления позиции воспроизведения
+      // Обработка обновления позиции
       .addCase(updatePlaybackPosition.pending, (state) => {
-        // Здесь можно не менять состояние, так как это фоновая операция
+        state.updateStatus = 'loading';
       })
-      .addCase(updatePlaybackPosition.fulfilled, (state) => {
-        // Операция выполнена успешно
+      .addCase(updatePlaybackPosition.fulfilled, (state, action) => {
+        state.updateStatus = 'succeeded';
+        state.lastSyncTime = new Date().toISOString();
       })
       .addCase(updatePlaybackPosition.rejected, (state, action) => {
+        state.updateStatus = 'failed';
         state.error = action.payload;
       })
       
@@ -168,10 +208,28 @@ const playbackSlice = createSlice({
       // Обработка получения активных устройств
       .addCase(getUserActiveDevices.fulfilled, (state, action) => {
         state.activeDevices = action.payload;
+      })
+      
+      // Обработка получения позиции
+      .addCase(fetchPlaybackPosition.pending, (state) => {
+        state.fetchStatus = 'loading';
+      })
+      .addCase(fetchPlaybackPosition.fulfilled, (state, action) => {
+        state.fetchStatus = 'succeeded';
+        state.lastSyncTime = new Date().toISOString();
+      })
+      .addCase(fetchPlaybackPosition.rejected, (state, action) => {
+        state.fetchStatus = 'failed';
+        state.error = action.payload;
+      })
+      
+      // Обработка получения позиций всех устройств
+      .addCase(fetchAllDevicesPositions.fulfilled, (state, action) => {
+        state.devicePositions = action.payload;
       });
   },
 });
 
-export const { clearPlaybackError, resetSyncStatus } = playbackSlice.actions;
+export const { clearPlaybackError, resetSyncStatus, toggleSync, setLastSyncTime } = playbackSlice.actions;
 
 export default playbackSlice.reducer; 

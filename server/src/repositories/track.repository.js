@@ -22,7 +22,7 @@ class TrackRepository {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'username', 'avatar'],
+          attributes: ['id', 'username', 'avatar_path'],
         },
       ],
     });
@@ -80,12 +80,12 @@ class TrackRepository {
     
     // Фильтр по пользователю
     if (userId) {
-      whereClause.userId = userId;
+      whereClause.user_id = userId;
     }
     
     // Фильтр по публичности
     if (isPublic !== null) {
-      whereClause.isPublic = isPublic;
+      whereClause.is_public = isPublic;
     }
     
     // Фильтр по жанру
@@ -111,7 +111,7 @@ class TrackRepository {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'username', 'avatar'],
+          attributes: ['id', 'username', 'avatar_path'],
         },
       ],
     });
@@ -129,7 +129,7 @@ class TrackRepository {
       return null;
     }
     
-    return await track.increment('playCount');
+    return await track.increment('play_count');
   }
 
   /**

@@ -26,11 +26,29 @@ export const fetchTrackById = createAsyncThunk(
 
 export const uploadTrack = createAsyncThunk(
   'tracks/upload',
-  async (formData, { rejectWithValue }) => {
+  async ({ formData, onProgress }, { rejectWithValue }) => {
     try {
-      return await trackService.uploadTrack(formData);
+      const trackService = (await import('../../services/trackService')).default;
+      return await trackService.uploadTrack(formData, onProgress);
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Ошибка загрузки трека');
+      console.error('Ошибка в createAsyncThunk:', error);
+      
+      // Подробный вывод ошибки для отладки
+      if (error.response) {
+        // Ответ сервера с ошибкой
+        console.error('Данные ответа:', error.response.data);
+        console.error('Статус:', error.response.status);
+        console.error('Заголовки:', error.response.headers);
+        return rejectWithValue(error.response.data.message || 'Ошибка загрузки трека');
+      } else if (error.request) {
+        // Запрос был сделан, но ответа нет
+        console.error('Запрос без ответа:', error.request);
+        return rejectWithValue('Нет ответа от сервера');
+      } else {
+        // Произошла ошибка при настройке запроса
+        console.error('Ошибка настройки:', error.message);
+        return rejectWithValue(error.message || 'Ошибка загрузки трека');
+      }
     }
   }
 );

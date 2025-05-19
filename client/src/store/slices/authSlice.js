@@ -87,9 +87,28 @@ export const fetchUserDevices = createAsyncThunk(
   'auth/fetchUserDevices',
   async (_, { getState, rejectWithValue }) => {
     try {
-      const { user } = getState().auth;
+      const { user, devices } = getState().auth;
+      
+      // Не делаем запрос, если пользователь не авторизован
       if (!user) return [];
-      return await authService.getUserDevices(user.id);
+      
+      // Не делаем запрос, если устройства уже загружены
+      if (devices && devices.length > 0) {
+        console.log('Используем кешированные данные устройств пользователя');
+        return devices;
+      }
+      
+      // Добавляем проверку на lastDevicesRequestTime, чтобы не отправлять запросы слишком часто
+      const { lastDevicesRequestTime } = getState().auth;
+      const now = Date.now();
+      
+      if (lastDevicesRequestTime && (now - lastDevicesRequestTime < 60000)) {
+        console.log('Слишком частый запрос устройств, используем существующие данные');
+        return devices || [];
+      }
+      
+      const result = await authService.getUserDevices(user.id);
+      return result;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Ошибка получения устройств');
     }
@@ -103,6 +122,7 @@ const initialState = {
   isAuthenticated: false,
   loading: false,
   devices: [],
+  lastDevicesRequestTime: null,
   error: null,
 };
 
@@ -191,6 +211,7 @@ const authSlice = createSlice({
       .addCase(fetchUserDevices.fulfilled, (state, action) => {
         state.loading = false;
         state.devices = action.payload;
+        state.lastDevicesRequestTime = Date.now();
       })
       .addCase(fetchUserDevices.rejected, (state, action) => {
         state.loading = false;

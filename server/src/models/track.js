@@ -1,8 +1,8 @@
 module.exports = (sequelize, DataTypes) => {
   const Track = sequelize.define('Track', {
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
       primaryKey: true,
     },
     title: {
@@ -19,67 +19,64 @@ module.exports = (sequelize, DataTypes) => {
         notEmpty: true,
       },
     },
-    album: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
     genre: {
       type: DataTypes.STRING,
       allowNull: true,
     },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
     duration: {
       type: DataTypes.INTEGER, // длительность в секундах
-      allowNull: false,
-    },
-    year: {
-      type: DataTypes.INTEGER,
       allowNull: true,
-      validate: {
-        min: 1900,
-        max: new Date().getFullYear(),
-      },
     },
-    filePath: {
+    file_path: {
       type: DataTypes.STRING,
       allowNull: false,
+      field: 'file_path',
     },
-    coverPath: {
+    stream_path: {
       type: DataTypes.STRING,
       allowNull: true,
+      field: 'stream_path',
     },
-    streamPath: {
+    cover_path: {
       type: DataTypes.STRING,
       allowNull: true,
+      field: 'cover_path',
     },
-    playCount: {
+    play_count: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
+      field: 'play_count',
     },
-    isPublic: {
+    is_public: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
+      field: 'is_public',
     },
     userId: {
-      type: DataTypes.UUID,
+      type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
-        model: 'Users',
-        key: 'id',
-      },
+      field: 'user_id',
     },
+  }, {
+    tableName: 'tracks',
+    underscored: true,
   });
 
   // Ассоциации с другими моделями
   Track.associate = (models) => {
     Track.belongsTo(models.User, {
-      foreignKey: 'userId',
+      foreignKey: 'user_id',
       as: 'user',
     });
     
     Track.belongsToMany(models.Playlist, {
-      through: 'PlaylistTracks',
-      foreignKey: 'trackId',
-      otherKey: 'playlistId',
+      through: 'playlist_tracks',
+      foreignKey: 'track_id',
+      otherKey: 'playlist_id',
       as: 'playlists',
     });
     

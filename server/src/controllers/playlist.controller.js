@@ -130,14 +130,24 @@ class PlaylistController {
       
       const playlists = await playlistService.getPlaylists(options);
       
+      if (!playlists) {
+        return res.status(200).json({
+          playlists: [],
+          totalCount: 0,
+          currentPage: parseInt(page),
+          totalPages: 0,
+        });
+      }
+      
       res.status(200).json({
-        playlists: playlists.rows,
-        totalCount: playlists.count,
+        playlists: playlists.rows || [],
+        totalCount: playlists.count || 0,
         currentPage: parseInt(page),
-        totalPages: Math.ceil(playlists.count / limit),
+        totalPages: Math.ceil((playlists.count || 0) / limit),
       });
     } catch (error) {
-      next(error);
+      console.error('Ошибка при получении плейлистов:', error);
+      res.status(500).json({ message: 'Ошибка сервера при получении плейлистов', error: error.message });
     }
   }
 

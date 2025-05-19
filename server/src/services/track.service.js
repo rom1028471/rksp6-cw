@@ -20,8 +20,8 @@ class TrackService {
       const newTrackData = {
         ...trackData,
         duration: audioInfo.duration,
-        filePath: `/uploads/audio/${path.basename(audioFile.path)}`,
-        coverPath: coverFile ? `/uploads/images/${path.basename(coverFile.path)}` : null,
+        file_path: `/uploads/audio/${path.basename(audioFile.path)}`,
+        cover_path: coverFile ? `/uploads/images/${path.basename(coverFile.path)}` : null,
       };
       
       // Создаем трек в базе данных
@@ -32,7 +32,7 @@ class TrackService {
       
       // Обновляем путь к потоку в базе данных
       const streamPath = `/streams/${track.id}/playlist.m3u8`;
-      await trackRepository.update(track.id, { streamPath });
+      await trackRepository.update(track.id, { stream_path: streamPath });
       
       // Получаем обновленный трек
       const updatedTrack = await trackRepository.findById(track.id);

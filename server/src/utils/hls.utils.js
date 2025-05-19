@@ -1,7 +1,11 @@
 const fs = require('fs');
 const path = require('path');
 const ffmpeg = require('fluent-ffmpeg');
+const ffmpegStatic = require('ffmpeg-static');
 const config = require('../config');
+
+// Устанавливаем путь к ffmpeg
+ffmpeg.setFfmpegPath(ffmpegStatic);
 
 /**
  * Создает HLS поток из аудио файла

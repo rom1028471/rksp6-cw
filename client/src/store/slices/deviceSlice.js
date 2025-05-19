@@ -1,64 +1,50 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { v4 as uuidv4 } from 'uuid';
 
-// Функция для получения информации об устройстве
-const getDeviceInfo = () => {
-  const userAgent = navigator.userAgent;
-  let deviceType = 'Unknown';
-  let deviceName = 'Unknown Device';
-
-  // Определение типа устройства
-  if (/Android/i.test(userAgent)) {
-    deviceType = 'Android';
-    deviceName = 'Android Device';
-  } else if (/iPhone|iPad|iPod/i.test(userAgent)) {
-    deviceType = 'iOS';
-    deviceName = userAgent.match(/iPhone|iPad|iPod/i)[0];
-  } else if (/Windows/i.test(userAgent)) {
-    deviceType = 'Windows';
-    deviceName = 'Windows PC';
-  } else if (/Macintosh/i.test(userAgent)) {
-    deviceType = 'Mac';
-    deviceName = 'Mac';
-  } else if (/Linux/i.test(userAgent)) {
-    deviceType = 'Linux';
-    deviceName = 'Linux PC';
+/**
+ * Определение типа устройства
+ */
+function detectDeviceType() {
+  const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+  
+  // Проверка на мобильное устройство
+  if (/android/i.test(userAgent)) {
+    return 'Android';
   }
-
-  // Добавление информации о браузере
-  if (/Chrome/i.test(userAgent)) {
-    deviceName += ' - Chrome';
-  } else if (/Firefox/i.test(userAgent)) {
-    deviceName += ' - Firefox';
-  } else if (/Safari/i.test(userAgent)) {
-    deviceName += ' - Safari';
-  } else if (/MSIE|Trident/i.test(userAgent)) {
-    deviceName += ' - IE';
-  } else if (/Edge/i.test(userAgent)) {
-    deviceName += ' - Edge';
+  
+  if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+    return 'iOS';
   }
-
-  return {
-    deviceType,
-    deviceName
-  };
-};
-
-// Генерация ID устройства или получение из localStorage
-const getDeviceId = () => {
-  let deviceId = localStorage.getItem('deviceId');
-  if (!deviceId) {
-    deviceId = uuidv4();
-    localStorage.setItem('deviceId', deviceId);
+  
+  // Проверка на планшет (общий подход)
+  if (/tablet|ipad|playbook|silk|android(?!.*mobile)/i.test(userAgent)) {
+    return 'Tablet';
   }
-  return deviceId;
-};
+  
+  // Определение настольной ОС
+  if (/Windows/.test(userAgent)) {
+    return 'Windows Desktop';
+  }
+  
+  if (/Macintosh|MacIntel|MacPPC|Mac68K/.test(userAgent)) {
+    return 'MacOS';
+  }
+  
+  if (/Linux/.test(userAgent)) {
+    return 'Linux';
+  }
+  
+  return 'Unknown Device';
+}
 
-// Начальное состояние
+// Определение начального состояния
 const initialState = {
-  deviceId: getDeviceId(),
-  ...getDeviceInfo(),
+  deviceId: localStorage.getItem('deviceId') || null,
+  deviceName: localStorage.getItem('deviceName') || null,
+  deviceType: localStorage.getItem('deviceType') || detectDeviceType(),
   isOnline: navigator.onLine,
+  isMaster: localStorage.getItem('deviceIsMaster') === 'true' || false,
+  lastSync: localStorage.getItem('lastDeviceSync') || null
 };
 
 // Создание слайса
@@ -66,31 +52,57 @@ const deviceSlice = createSlice({
   name: 'device',
   initialState,
   reducers: {
-    // Обновление статуса подключения
-    updateOnlineStatus: (state, action) => {
+    // Инициализация устройства при первом запуске приложения
+    initializeDevice: (state, action) => {
+      if (!state.deviceId) {
+        state.deviceId = uuidv4();
+        localStorage.setItem('deviceId', state.deviceId);
+      }
+      
+      if (!state.deviceName || action.payload?.deviceName) {
+        state.deviceName = action.payload?.deviceName || `${state.deviceType} ${state.deviceId.substring(0, 4)}`;
+        localStorage.setItem('deviceName', state.deviceName);
+      }
+      
+      if (!state.deviceType) {
+        state.deviceType = detectDeviceType();
+        localStorage.setItem('deviceType', state.deviceType);
+      }
+    },
+    
+    // Обновление сетевого статуса устройства
+    setOnlineStatus: (state, action) => {
       state.isOnline = action.payload;
     },
     
     // Обновление имени устройства
-    updateDeviceName: (state, action) => {
+    setDeviceName: (state, action) => {
       state.deviceName = action.payload;
-      // Обновляем имя в localStorage
-      localStorage.setItem('deviceName', action.payload);
+      localStorage.setItem('deviceName', state.deviceName);
     },
     
-    // Генерация нового ID устройства
-    regenerateDeviceId: (state) => {
-      const newDeviceId = uuidv4();
-      state.deviceId = newDeviceId;
-      localStorage.setItem('deviceId', newDeviceId);
+    // Установка статуса мастер-устройства (главное устройство пользователя)
+    setMasterDevice: (state, action) => {
+      state.isMaster = action.payload;
+      localStorage.setItem('deviceIsMaster', action.payload.toString());
     },
-  },
+    
+    // Обновление времени последней синхронизации
+    updateLastSync: (state) => {
+      const now = new Date().toISOString();
+      state.lastSync = now;
+      localStorage.setItem('lastDeviceSync', now);
+    }
+  }
 });
 
+// Экспорт действий и редьюсера
 export const { 
-  updateOnlineStatus,
-  updateDeviceName,
-  regenerateDeviceId
+  initializeDevice, 
+  setOnlineStatus, 
+  setDeviceName,
+  setMasterDevice,
+  updateLastSync
 } = deviceSlice.actions;
 
 export default deviceSlice.reducer; 

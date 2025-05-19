@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const trackController = require('../controllers/track.controller');
 const { authMiddleware, roleMiddleware, ownerMiddleware } = require('../middleware/auth.middleware');
-const { uploadAudio, uploadImage } = require('../middleware/upload.middleware');
+const { uploadAudio, uploadImage, handleUploadError } = require('../middleware/upload.middleware');
 const { trackValidation, validate } = require('../middleware/validator.middleware');
 const { Track } = require('../models');
 
@@ -54,10 +54,20 @@ const { Track } = require('../models');
 router.post(
   '/',
   authMiddleware,
-  uploadAudio.fields([
-    { name: 'audio', maxCount: 1 },
-    { name: 'cover', maxCount: 1 },
-  ]),
+  (req, res, next) => {
+    console.log('Запрос на создание трека получен');
+    uploadAudio.fields([
+      { name: 'audio', maxCount: 1 },
+      { name: 'cover', maxCount: 1 },
+    ])(req, res, (err) => {
+      if (err) {
+        console.error('Ошибка загрузки файла:', err);
+        return res.status(400).json({ message: 'Ошибка загрузки файла: ' + err.message });
+      }
+      console.log('Файлы успешно загружены');
+      next();
+    });
+  },
   trackValidation,
   validate,
   trackController.createTrack

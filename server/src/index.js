@@ -7,9 +7,10 @@ const swaggerUi = require('swagger-ui-express');
 
 // Импорт маршрутов
 const authRoutes = require('./routes/auth.routes');
-const userRoutes = require('./routes/user.routes');
 const trackRoutes = require('./routes/track.routes');
 const playlistRoutes = require('./routes/playlist.routes');
+const userRoutes = require('./routes/user.routes');
+const playbackRoutes = require('./routes/playback');
 const streamRoutes = require('./routes/stream.routes');
 
 // Импорт конфигурации
@@ -54,7 +55,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: `http://localhost:${process.env.PORT || 5000}`,
+        url: `http://localhost:${config.port}`,
         description: 'Локальный сервер'
       }
     ]
@@ -67,9 +68,10 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // Маршруты API
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
 app.use('/api/tracks', trackRoutes);
 app.use('/api/playlists', playlistRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/playback', playbackRoutes);
 app.use('/api/stream', streamRoutes);
 
 // Обработка ошибок
@@ -84,7 +86,7 @@ app.use((err, req, res, next) => {
 });
 
 // Запуск сервера
-const PORT = process.env.PORT || 5000;
+const PORT = config.port;
 
 db.sequelize.sync({ alter: process.env.NODE_ENV === 'development' })
   .then(() => {

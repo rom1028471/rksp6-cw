@@ -23,12 +23,35 @@ const sequelize = new Sequelize(
   }
 );
 
-// Динамическая загрузка моделей
+// Определим порядок загрузки моделей для соблюдения зависимостей
+const modelOrder = [
+  'user.js',
+  'track.js',
+  'playlist.js',
+  'playlistTrack.js',
+  'playbackPosition.js',
+  'userDevice.js',
+  'favoriteTrack.js',
+  'favoritePlaylist.js',
+  'playHistory.js',
+  'deviceSession.js',
+];
+
+// Сначала загружаем модели в определенном порядке
+modelOrder.forEach(modelFile => {
+  if (fs.existsSync(path.join(__dirname, modelFile))) {
+    const model = require(path.join(__dirname, modelFile))(sequelize, Sequelize.DataTypes);
+    db[model.name] = model;
+  }
+});
+
+// Затем загружаем остальные модели, которые могли быть не указаны в modelOrder
 fs.readdirSync(__dirname)
   .filter(file => {
     return (
       file.indexOf('.') !== 0 &&
       file !== basename &&
+      !modelOrder.includes(file) &&
       file.slice(-3) === '.js'
     );
   })

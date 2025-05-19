@@ -44,8 +44,23 @@ class TrackService {
       };
     }
     
-    const response = await apiClient.post('/tracks', formData, config);
-    return response.data;
+    // Логируем содержимое FormData для отладки
+    console.log('Отправляемые данные:');
+    for (let [key, value] of formData.entries()) {
+      if (key === 'audio' || key === 'cover') {
+        console.log(key, value.name, value.type, value.size);
+      } else {
+        console.log(key, value);
+      }
+    }
+    
+    try {
+      const response = await apiClient.post('/tracks', formData, config);
+      return response.data;
+    } catch (error) {
+      console.error('Ошибка загрузки трека:', error.response?.data || error.message);
+      throw error;
+    }
   }
 
   /**

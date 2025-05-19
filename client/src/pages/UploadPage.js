@@ -88,24 +88,38 @@ const UploadPage = () => {
     formData.append('artist', artist);
     formData.append('genre', genre);
     formData.append('description', description);
-    formData.append('isPublic', isPublic);
+    formData.append('isPublic', isPublic.toString()); // Убедимся, что отправляем строку
     formData.append('audio', audioFile);
     
     if (coverFile) {
       formData.append('cover', coverFile);
     }
     
+    // Логируем FormData перед отправкой
+    console.log('Подготовлена FormData для отправки:');
+    for (let [key, value] of formData.entries()) {
+      if (key === 'audio' || key === 'cover') {
+        console.log(key, value.name, value.type, value.size);
+      } else {
+        console.log(key, value);
+      }
+    }
+    
     try {
+      console.log('Начинаем загрузку трека...');
       await dispatch(uploadTrack({
         formData,
         onProgress: (progress) => {
+          console.log(`Прогресс загрузки: ${progress}%`);
           setUploadProgress(progress);
         }
       })).unwrap();
       
+      console.log('Трек успешно загружен');
       // Перенаправляем на страницу треков после успешной загрузки
       navigate('/tracks');
     } catch (err) {
+      console.error('Ошибка при загрузке трека:', err);
       setFormError(err.message || 'Ошибка при загрузке трека. Пожалуйста, попробуйте снова.');
     }
   };

@@ -3,8 +3,8 @@ const bcrypt = require('bcryptjs');
 module.exports = (sequelize, DataTypes) => {
   const User = sequelize.define('User', {
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
       primaryKey: true,
     },
     username: {
@@ -34,13 +34,15 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('user', 'admin'),
       defaultValue: 'user',
     },
-    avatar: {
+    avatar_path: {
       type: DataTypes.STRING,
       allowNull: true,
+      field: 'avatar_path',
     },
     lastActive: {
       type: DataTypes.DATE,
       allowNull: true,
+      field: 'last_active',
     },
   }, {
     hooks: {
@@ -57,6 +59,8 @@ module.exports = (sequelize, DataTypes) => {
         }
       },
     },
+    tableName: 'users',
+    underscored: true,
   });
 
   // Метод для проверки пароля

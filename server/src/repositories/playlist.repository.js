@@ -22,7 +22,7 @@ class PlaylistRepository {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'username', 'avatar'],
+          attributes: ['id', 'username', 'avatar_path'],
         },
         {
           model: Track,
@@ -34,7 +34,7 @@ class PlaylistRepository {
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'username', 'avatar'],
+              attributes: ['id', 'username', 'avatar_path'],
             },
           ],
         },
@@ -93,12 +93,12 @@ class PlaylistRepository {
     
     // Фильтр по пользователю
     if (userId) {
-      whereClause.userId = userId;
+      whereClause.user_id = userId;
     }
     
     // Фильтр по публичности
     if (isPublic !== null) {
-      whereClause.isPublic = isPublic;
+      whereClause.is_public = isPublic;
     }
     
     // Поиск по названию или описанию
@@ -118,7 +118,7 @@ class PlaylistRepository {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'username', 'avatar'],
+          attributes: ['id', 'username', 'avatar_path'],
         },
       ],
     });
@@ -135,15 +135,15 @@ class PlaylistRepository {
     // Если позиция не указана, добавляем трек в конец плейлиста
     if (position === 0) {
       const maxPosition = await PlaylistTrack.max('position', {
-        where: { playlistId },
+        where: { playlist_id: playlistId },
       });
       
       position = (maxPosition || 0) + 1;
     }
     
     return await PlaylistTrack.create({
-      playlistId,
-      trackId,
+      playlist_id: playlistId,
+      track_id: trackId,
       position,
     });
   }
@@ -157,8 +157,8 @@ class PlaylistRepository {
   async removeTrack(playlistId, trackId) {
     const result = await PlaylistTrack.destroy({
       where: {
-        playlistId,
-        trackId,
+        playlist_id: playlistId,
+        track_id: trackId,
       },
     });
     
@@ -177,8 +177,8 @@ class PlaylistRepository {
         { position: item.position },
         {
           where: {
-            playlistId,
-            trackId: item.trackId,
+            playlist_id: playlistId,
+            track_id: item.trackId,
           },
         }
       );

@@ -1,17 +1,13 @@
 module.exports = (sequelize, DataTypes) => {
   const DeviceSession = sequelize.define('DeviceSession', {
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
       primaryKey: true,
     },
     userId: {
-      type: DataTypes.UUID,
+      type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
-        model: 'Users',
-        key: 'id',
-      },
     },
     deviceId: {
       type: DataTypes.STRING,
@@ -34,12 +30,8 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: true,
     },
     currentTrackId: {
-      type: DataTypes.UUID,
+      type: DataTypes.INTEGER,
       allowNull: true,
-      references: {
-        model: 'Tracks',
-        key: 'id',
-      },
     },
     currentPosition: {
       type: DataTypes.INTEGER,
@@ -56,11 +48,15 @@ module.exports = (sequelize, DataTypes) => {
     DeviceSession.belongsTo(models.User, {
       foreignKey: 'userId',
       as: 'user',
+      onDelete: 'NO ACTION',
+      onUpdate: 'CASCADE'
     });
     
     DeviceSession.belongsTo(models.Track, {
       foreignKey: 'currentTrackId',
       as: 'currentTrack',
+      onDelete: 'SET NULL',
+      onUpdate: 'CASCADE'
     });
   };
 

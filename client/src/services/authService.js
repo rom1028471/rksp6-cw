@@ -4,6 +4,12 @@ import apiClient from './apiClient';
  * Сервис для аутентификации пользователей
  */
 class AuthService {
+  constructor() {
+    // Кеш для хранения данных о устройствах
+    this.devicesCache = new Map();
+    this.cacheTime = 300000; // 5 минут - время жизни кеша
+  }
+
   /**
    * Регистрирует нового пользователя
    * @param {Object} userData - Данные пользователя (username, email, password)
@@ -46,6 +52,9 @@ class AuthService {
     
     // Удаляем токен из localStorage
     localStorage.removeItem('token');
+    
+    // Очищаем кеш устройств
+    this.devicesCache.clear();
     
     return response.data;
   }
@@ -121,8 +130,47 @@ class AuthService {
    * @returns {Promise<Array>} - Массив устройств пользователя
    */
   async getUserDevices(userId) {
-    const response = await apiClient.get(`/users/${userId}/devices`);
-    return response.data;
+    // Проверяем кеш
+    const cacheKey = `devices_${userId}`;
+    const cacheData = this.devicesCache.get(cacheKey);
+    
+    if (cacheData && (Date.now() - cacheData.timestamp < this.cacheTime)) {
+      console.log('Используем кешированные данные устройств пользователя');
+      return cacheData.data;
+    }
+    
+    try {
+      console.log('Запрашиваем устройства пользователя с сервера');
+      const response = await apiClient.get(`/users/${userId}/devices`);
+      
+      // Кешируем результат
+      const devices = response.data;
+      this.devicesCache.set(cacheKey, {
+        data: devices,
+        timestamp: Date.now()
+      });
+      
+      return devices;
+    } catch (error) {
+      if (error?.response?.status === 403) {
+        console.warn('Нет прав доступа к устройствам пользователя, используем пустой список');
+        // В случае ошибки прав доступа, кешируем пустой массив, чтобы не делать повторные запросы
+        this.devicesCache.set(cacheKey, {
+          data: [],
+          timestamp: Date.now()
+        });
+        return [];
+      }
+      throw error;
+    }
+  }
+  
+  /**
+   * Очищает кеш сервиса
+   */
+  clearCache() {
+    this.devicesCache.clear();
+    console.log('Кеш authService очищен');
   }
 }
 

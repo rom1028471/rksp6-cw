@@ -25,11 +25,11 @@ class PlaybackService {
   }
 
   /**
-   * Получает историю прослушиваний пользователя
-   * @param {Object} params - Параметры запроса (page, limit)
-   * @returns {Promise<Object>} - История прослушиваний с пагинацией
+   * Получает историю воспроизведения пользователя
+   * @param {Object} params - Параметры запроса (userId, limit, page)
+   * @returns {Promise<Object>} - История воспроизведения (элементы, общее количество)
    */
-  async getUserHistory(params = {}) {
+  async getPlaybackHistory(params) {
     const response = await apiClient.get('/playback/history', { params });
     return response.data;
   }
@@ -70,6 +70,34 @@ class PlaybackService {
    */
   async syncPlayback(deviceData) {
     const response = await apiClient.post('/playback/sync', deviceData);
+    return response.data;
+  }
+
+  /**
+   * Получает все активные сессии воспроизведения пользователя
+   * @returns {Promise<Array>} - Массив активных сессий
+   */
+  async getActiveSessions() {
+    const response = await apiClient.get('/playback/active-sessions');
+    return response.data;
+  }
+
+  /**
+   * Отключает устройство от синхронизации
+   * @param {string} deviceId - ID устройства для отключения
+   * @returns {Promise<Object>} - Результат операции
+   */
+  async disconnectDevice(deviceId) {
+    const response = await apiClient.post('/playback/disconnect', { deviceId });
+    return response.data;
+  }
+
+  /**
+   * Получает информацию о всех устройствах с активным воспроизведением
+   * @returns {Promise<Array>} - Массив устройств с информацией о воспроизведении
+   */
+  async getActiveDevices() {
+    const response = await apiClient.get('/playback/devices');
     return response.data;
   }
 }
