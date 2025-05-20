@@ -33,6 +33,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     tableName: 'user_devices',
     underscored: true,
+    timestamps: false,
     indexes: [
       {
         unique: true,

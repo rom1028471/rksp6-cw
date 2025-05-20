@@ -70,6 +70,42 @@ const TracksPage = () => {
     setShowOptions(null);
   };
 
+  const handleDownloadTrack = (track) => {
+    // Получаем полный URL пути к файлу
+    const baseUrl = process.env.REACT_APP_API_URL?.replace(/\/api$/, '') || 'http://localhost:5000';
+    const fileUrl = `${baseUrl}${track.filePath}`;
+    
+    // Создаем элемент <a>
+    const link = document.createElement('a');
+    link.href = fileUrl;
+    link.download = `${track.artist} - ${track.title}.mp3`;
+    document.body.appendChild(link);
+    
+    // Симулируем клик по ссылке для начала загрузки
+    link.click();
+    
+    // Удаляем элемент
+    document.body.removeChild(link);
+    setShowOptions(null);
+  };
+
+  const handleDeleteTrack = async (trackId) => {
+    if (window.confirm('Вы действительно хотите удалить этот трек?')) {
+      try {
+        // Импортируем сервис для работы с треками
+        const trackService = (await import('../services/trackService')).default;
+        await trackService.deleteTrack(trackId);
+        
+        // Перезагружаем список треков
+        loadTracks();
+        setShowOptions(null);
+      } catch (error) {
+        console.error('Ошибка при удалении трека:', error);
+        alert('Не удалось удалить трек. Попробуйте ещё раз позже.');
+      }
+    }
+  };
+
   const handleSortChange = (e) => {
     setFilters({
       ...filters,
@@ -240,11 +276,11 @@ const TracksPage = () => {
                       <button onClick={() => handleAddToQueue(track)}>
                         <FaPlus /> Добавить в очередь
                       </button>
-                      <button>
+                      <button onClick={() => handleDownloadTrack(track)}>
                         <FaDownload /> Скачать
                       </button>
                       {user && track.userId === user.id && (
-                        <button className="delete-btn">
+                        <button className="delete-btn" onClick={() => handleDeleteTrack(track.id)}>
                           <FaTrash /> Удалить
                         </button>
                       )}

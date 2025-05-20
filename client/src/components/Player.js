@@ -194,36 +194,46 @@ const Player = () => {
           // Воспроизводим онлайн через HLS
           setIsCached(false);
           
-          if (Hls.isSupported() && isOnline) {
-        hls = new Hls();
-        hls.loadSource(currentTrack.streamPath);
-        hls.attachMedia(audio);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          if (isPlaying) audio.play().catch(err => console.error('Ошибка воспроизведения:', err));
-        });
-        
-        // Обработка ошибок
-        hls.on(Hls.Events.ERROR, (event, data) => {
-          console.error('HLS ошибка:', data);
-          if (data.fatal) {
-            switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                hls.startLoad();
-                break;
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                hls.recoverMediaError();
-                break;
-              default:
-                // Невосстановимая ошибка
-                hls.destroy();
-                break;
-            }
+          // Проверяем наличие полного пути к потоку
+          let streamUrl = currentTrack.streamPath;
+          // Если путь не начинается с http или https, добавляем базовый URL API
+          if (streamUrl && !streamUrl.startsWith('http')) {
+            const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+            // Убираем /api из базового URL если путь к потоку не часть API
+            const baseUrl = apiBaseUrl.replace(/\/api$/, '');
+            streamUrl = `${baseUrl}${streamUrl}`;
           }
-        });
-      } 
-      // Если браузер поддерживает HLS нативно (Safari)
+          
+          if (Hls.isSupported() && isOnline) {
+            hls = new Hls();
+            hls.loadSource(streamUrl);
+            hls.attachMedia(audio);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+              if (isPlaying) audio.play().catch(err => console.error('Ошибка воспроизведения:', err));
+            });
+            
+            // Обработка ошибок
+            hls.on(Hls.Events.ERROR, (event, data) => {
+              console.error('HLS ошибка:', data);
+              if (data.fatal) {
+                switch (data.type) {
+                  case Hls.ErrorTypes.NETWORK_ERROR:
+                    hls.startLoad();
+                    break;
+                  case Hls.ErrorTypes.MEDIA_ERROR:
+                    hls.recoverMediaError();
+                    break;
+                  default:
+                    // Невосстановимая ошибка
+                    hls.destroy();
+                    break;
+                }
+              }
+            });
+          } 
+          // Если браузер поддерживает HLS нативно (Safari)
           else if (audio.canPlayType('application/vnd.apple.mpegurl') && isOnline) {
-        audio.src = currentTrack.streamPath;
+            audio.src = streamUrl;
           }
           // Офлайн и нет кэша - ничего не делаем
           else if (!isOnline) {

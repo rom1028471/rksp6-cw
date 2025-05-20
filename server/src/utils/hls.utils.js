@@ -2,22 +2,28 @@ const fs = require('fs');
 const path = require('path');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegStatic = require('ffmpeg-static');
+const ffprobeStatic = require('ffprobe-static');
 const config = require('../config');
 
 // Устанавливаем путь к ffmpeg
 ffmpeg.setFfmpegPath(ffmpegStatic);
+// Устанавливаем путь к ffprobe
+ffmpeg.setFfprobePath(ffprobeStatic.path);
 
 /**
  * Создает HLS поток из аудио файла
  * @param {string} inputFilePath - Путь к входному аудио файлу
- * @param {string} trackId - Идентификатор трека
+ * @param {string|number} trackId - Идентификатор трека
  * @returns {Promise<string>} - Путь к директории с HLS файлами
  */
 exports.createHLSStream = async (inputFilePath, trackId) => {
   return new Promise((resolve, reject) => {
     try {
+      // Преобразуем trackId в строку для безопасности
+      const trackIdStr = String(trackId);
+      
       // Создаем директорию для HLS файлов
-      const streamDir = path.join(__dirname, '../../', config.storage.streamDir, trackId);
+      const streamDir = path.join(__dirname, '../../', config.storage.streamDir, trackIdStr);
       
       if (!fs.existsSync(streamDir)) {
         fs.mkdirSync(streamDir, { recursive: true });
@@ -84,13 +90,15 @@ exports.getAudioInfo = async (filePath) => {
 
 /**
  * Удаляет HLS файлы
- * @param {string} trackId - Идентификатор трека
+ * @param {string|number} trackId - Идентификатор трека
  * @returns {Promise<void>}
  */
 exports.removeHLSStream = async (trackId) => {
   return new Promise((resolve, reject) => {
     try {
-      const streamDir = path.join(__dirname, '../../', config.storage.streamDir, trackId);
+      // Преобразуем trackId в строку
+      const trackIdStr = String(trackId);
+      const streamDir = path.join(__dirname, '../../', config.storage.streamDir, trackIdStr);
       
       if (fs.existsSync(streamDir)) {
         fs.rm(streamDir, { recursive: true, force: true }, (err) => {
@@ -111,27 +119,31 @@ exports.removeHLSStream = async (trackId) => {
 
 /**
  * Получает путь к HLS манифесту
- * @param {string} trackId - Идентификатор трека
+ * @param {string|number} trackId - Идентификатор трека
  * @returns {string} - Путь к манифесту
  */
 exports.getManifestPath = (trackId) => {
-  return path.join(__dirname, '../../', config.storage.streamDir, trackId, 'playlist.m3u8');
+  // Преобразуем trackId в строку
+  const trackIdStr = String(trackId);
+  return path.join(__dirname, '../../', config.storage.streamDir, trackIdStr, 'playlist.m3u8');
 };
 
 /**
  * Получает путь к HLS сегменту
- * @param {string} trackId - Идентификатор трека
+ * @param {string|number} trackId - Идентификатор трека
  * @param {string} segmentId - Идентификатор сегмента (например, 'segment_001.ts')
  * @returns {string} - Путь к сегменту
  */
 exports.getSegmentPath = (trackId, segmentId) => {
-  return path.join(__dirname, '../../', config.storage.streamDir, trackId, segmentId);
+  // Преобразуем trackId в строку
+  const trackIdStr = String(trackId);
+  return path.join(__dirname, '../../', config.storage.streamDir, trackIdStr, segmentId);
 };
 
 /**
  * Генерирует HLS сегменты для аудиофайла
  * @param {string} filePath - Путь к аудиофайлу
- * @param {string} trackId - Идентификатор трека
+ * @param {string|number} trackId - Идентификатор трека
  * @returns {Promise<void>}
  */
 exports.generateHlsSegments = async (filePath, trackId) => {
