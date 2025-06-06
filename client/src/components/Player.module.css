@@ -1,0 +1,275 @@
+.playerContainer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 80px; /* Высота плеера, должна совпадать с padding-bottom в Layout.js */
+  background-color: #282828; /* Темный фон для плеера */
+  color: #fff; /* Белый текст */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3); /* Тень сверху */
+  z-index: 1000; /* Чтобы плеер был поверх остального контента */
+}
+
+.trackInfo {
+  display: flex;
+  align-items: center;
+  min-width: 200px; /* Минимальная ширина для информации о треке */
+}
+
+.coverArt {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  margin-right: 15px;
+  border-radius: 4px;
+}
+
+.title {
+  font-size: 1em;
+  font-weight: bold;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 250px; /* Ограничение ширины, чтобы не уезжало */
+}
+
+.artist {
+  font-size: 0.8em;
+  color: #b3b3b3; /* Светло-серый для исполнителя */
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 250px;
+}
+
+.playerControls {
+  display: flex;
+  flex-direction: column; /* Кнопки и прогресс-бар друг над другом */
+  align-items: center;
+  justify-content: center;
+  flex-grow: 1; /* Занимает доступное пространство по центру */
+  margin: 0 20px; /* Отступы по бокам */
+}
+
+.controlButtons {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px; /* Отступ под кнопками */
+}
+
+.controlButton {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.2em; /* Размер иконок */
+  margin: 0 10px;
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.controlButton.playPause {
+  font-size: 1.8em; /* Кнопка Play/Pause больше */
+  border: 1px solid #fff;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+}
+
+.controlButton:hover {
+  color: #1db954; /* Зеленый Spotify при наведении */
+}
+
+.controlButton.active {
+  color: #1db954;
+}
+
+.progressBarContainer {
+  width: 100%;
+  max-width: 500px; /* Ограничение ширины прогресс-бара */
+  display: flex;
+  align-items: center;
+  font-size: 0.75em;
+  color: #b3b3b3;
+}
+
+.progressBar {
+  flex-grow: 1;
+  height: 4px;
+  background-color: #535353;
+  border-radius: 2px;
+  margin: 0 10px;
+  cursor: pointer;
+  overflow: hidden; /* Для корректного отображения прогресса */
+}
+
+.progress {
+  height: 100%;
+  background-color: #1db954; /* Зеленый Spotify для прогресса */
+  width: 0%; /* Начальная ширина */
+  border-radius: 2px;
+  transition: width 0.1s linear; /* Плавное обновление прогресса */
+}
+
+.time {
+  min-width: 40px; /* Чтобы время не прыгало */
+  text-align: center;
+}
+
+.rightControls {
+  display: flex;
+  align-items: center;
+  min-width: 180px; /* Минимальная ширина для правых контролов */
+  justify-content: flex-end;
+}
+
+.volumeControls {
+  display: flex;
+  align-items: center;
+  margin-right: 15px;
+}
+
+.volumeSlider {
+  width: 80px;
+  margin-left: 5px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: #535353;
+  border-radius: 2px;
+}
+
+.volumeSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.volumeSlider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+.additionalActions .controlButton {
+  font-size: 1em; /* Чуть меньше для доп. кнопок */
+  margin: 0 5px;
+}
+
+/* Стили для скрытия плеера, если трека нет (если нужно будет) */
+.playerHidden {
+  display: none;
+}
+
+/* Стили для сообщения о необходимости авторизации */
+.authRequiredMessageContainer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 80px; /* Такая же высота, как у плеера */
+  background-color: #282828;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  text-align: center;
+}
+
+.authRequiredMessageContainer p {
+  margin: 0;
+}
+
+.authRequiredMessageContainer a {
+  color: #1db954; /* Spotify green */
+  text-decoration: underline;
+  margin: 0 5px;
+}
+
+.authRequiredMessageContainer a:hover {
+  color: #1ed760;
+}
+
+.player-container.minimized .track-info,
+.player-container.minimized .playback-controls {
+  display: none;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .player-container {
+    flex-direction: column;
+    height: auto;
+    padding: 10px;
+  }
+
+  .track-info {
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  
+  .track-cover {
+    width: 50px;
+    height: 50px;
+  }
+
+  .track-details {
+    margin-left: 10px;
+  }
+
+  .playback-controls {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .time-slider {
+    position: static;
+    width: 100%;
+    height: 6px;
+    bottom: auto;
+    left: auto;
+    transform: none;
+  }
+
+  .volume-slider {
+    display: none; /* Скрываем на мобильных для простоты */
+  }
+
+  .playback-controls button {
+    font-size: 1.2rem;
+    padding: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+    .trackCover {
+        display: none; /* Hide cover completely */
+    }
+    .playerContent {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "main"
+            "progress";
+    }
+} 

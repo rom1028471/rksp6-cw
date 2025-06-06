@@ -1,0 +1,146 @@
+.navbar {
+  background-color: #1e1e1e;
+  color: white;
+  padding: 1rem 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  margin-bottom: 2rem;
+}
+
+.navbarContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.navbarBrand {
+  display: flex;
+  align-items: center;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.navbarBrand:hover {
+  color: #1db954;
+}
+
+.navbarBrand span {
+  margin-left: 10px;
+}
+
+.navbarNav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.navItem {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+.navItem::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: 0;
+  left: 50%;
+  background-color: #1db954;
+  transition: all 0.3s ease-out;
+}
+
+.navItem:hover,
+.navItem.active {
+  color: white;
+}
+
+.navItem:hover::after,
+.navItem.active::after {
+  width: 100%;
+  left: 0;
+}
+
+.navbarUser {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.userAvatar {
+  display: flex;
+  align-items: center;
+  color: white;
+  text-decoration: none;
+  gap: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 20px;
+  transition: background-color 0.3s ease;
+}
+
+.userAvatar:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.userAvatar img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.logoutBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.logoutBtn:hover {
+  color: white;
+  background-color: #1db954;
+  border-color: #1db954;
+}
+
+@media (max-width: 768px) {
+  .navbarContent {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .navbarNav {
+    width: 100%;
+    justify-content: space-around;
+  }
+  
+  .navbarUser {
+    width: 100%;
+    justify-content: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 1rem;
+  }
+
+  /* Keep icons on mobile, hide text */
+  .navItem span,
+  .logoutBtn span,
+  .userAvatar span {
+     display: none;
+  }
+} 

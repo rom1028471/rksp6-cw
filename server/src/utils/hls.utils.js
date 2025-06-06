@@ -1,0 +1,174 @@
+const fs = require('fs');
+const path = require('path');
+const ffmpeg = require('fluent-ffmpeg');
+const ffmpegStatic = require('ffmpeg-static');
+const ffprobeStatic = require('ffprobe-static');
+const config = require('../config');
+
+// Устанавливаем путь к ffmpeg
+ffmpeg.setFfmpegPath(ffmpegStatic);
+// Устанавливаем путь к ffprobe
+ffmpeg.setFfprobePath(ffprobeStatic.path);
+
+/**
+ * Создает HLS поток из аудио файла
+ * @param {string} inputFilePath - Путь к входному аудио файлу
+ * @param {string|number} trackId - Идентификатор трека
+ * @returns {Promise<string>} - Путь к директории с HLS файлами
+ */
+exports.createHLSStream = async (inputFilePath, trackId) => {
+  return new Promise((resolve, reject) => {
+    try {
+      // Преобразуем trackId в строку для безопасности
+      const trackIdStr = String(trackId);
+      
+      // Создаем директорию для HLS файлов
+      const streamDir = path.join(__dirname, '../../', config.storage.streamDir, trackIdStr);
+      
+      if (!fs.existsSync(streamDir)) {
+        fs.mkdirSync(streamDir, { recursive: true });
+      }
+      
+      const playlistPath = path.join(streamDir, 'playlist.m3u8');
+
+      // Конвертируем аудио в HLS
+      const command = ffmpeg(inputFilePath)
+        .audioCodec('aac')
+        .audioBitrate('128k')
+        .audioChannels(2)
+        .format('hls')
+        .outputOptions([
+          `-hls_time ${config.hls.segmentDuration || 10}`,
+          `-hls_list_size ${config.hls.playlistSize ?? 0}`,
+          '-hls_segment_filename', path.join(streamDir, 'segment_%03d.ts'),
+        ])
+        .output(playlistPath)
+        .on('start', (commandLine) => {
+          console.log('FFMPEG команда запущена: ' + commandLine);
+        })
+        .on('end', () => {
+          console.log('Создание HLS потока успешно завершено для trackId:', trackIdStr);
+          resolve(streamDir);
+        })
+        .on('error', (err, stdout, stderr) => {
+          console.error('Ошибка FFMPEG:', err.message);
+          console.error('FFMPEG stdout:', stdout);
+          console.error('FFMPEG stderr:', stderr);
+          reject(new Error(`Ошибка при создании HLS потока: ${err.message}`));
+        });
+        
+      command.run();
+
+    } catch (error) {
+      console.error('Внутренняя ошибка в createHLSStream:', error);
+      reject(error);
+    }
+  });
+};
+
+/**
+ * Получает информацию о аудио файле (длительность, битрейт и т.д.)
+ * @param {string} filePath - Путь к аудио файлу
+ * @returns {Promise<Object>} - Информация о файле
+ */
+exports.getAudioInfo = async (filePath) => {
+  return new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(filePath, (err, metadata) => {
+      if (err) {
+        reject(new Error(`Ошибка при получении информации о файле: ${err.message}`));
+        return;
+      }
+      
+      const audioStream = metadata.streams.find(stream => stream.codec_type === 'audio');
+      
+      if (!audioStream) {
+        reject(new Error('Аудио поток не найден в файле'));
+        return;
+      }
+      
+      resolve({
+        duration: Math.floor(metadata.format.duration || 0),
+        bitrate: metadata.format.bit_rate,
+        sampleRate: audioStream.sample_rate,
+        channels: audioStream.channels,
+        codec: audioStream.codec_name,
+      });
+    });
+  });
+};
+
+/**
+ * Удаляет HLS файлы
+ * @param {string|number} trackId - Идентификатор трека
+ * @returns {Promise<void>}
+ */
+exports.removeHLSStream = async (trackId) => {
+  return new Promise((resolve, reject) => {
+    try {
+      // Преобразуем trackId в строку
+      const trackIdStr = String(trackId);
+      const streamDir = path.join(__dirname, '../../', config.storage.streamDir, trackIdStr);
+      
+      if (fs.existsSync(streamDir)) {
+        fs.rm(streamDir, { recursive: true, force: true }, (err) => {
+          if (err) {
+            reject(new Error(`Ошибка при удалении HLS файлов: ${err.message}`));
+            return;
+          }
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
+/**
+ * Получает путь к HLS манифесту
+ * @param {string|number} trackId - Идентификатор трека
+ * @returns {string} - Путь к манифесту
+ */
+exports.getManifestPath = (trackId) => {
+  // Преобразуем trackId в строку
+  const trackIdStr = String(trackId);
+  return path.join(__dirname, '../../', config.storage.streamDir, trackIdStr, 'playlist.m3u8');
+};
+
+/**
+ * Получает путь к HLS сегменту
+ * @param {string|number} trackId - Идентификатор трека
+ * @param {string} segmentId - Идентификатор сегмента (например, 'segment_001.ts')
+ * @returns {string} - Путь к сегменту
+ */
+exports.getSegmentPath = (trackId, segmentId) => {
+  // Преобразуем trackId в строку
+  const trackIdStr = String(trackId);
+  return path.join(__dirname, '../../', config.storage.streamDir, trackIdStr, segmentId);
+};
+
+/**
+ * Генерирует HLS сегменты для аудиофайла
+ * @param {string} filePath - Путь к аудиофайлу
+ * @param {string|number} trackId - Идентификатор трека
+ * @returns {Promise<void>}
+ */
+exports.generateHlsSegments = async (filePath, trackId) => {
+  try {
+    await exports.createHLSStream(filePath, trackId);
+  } catch (error) {
+    throw new Error(`Ошибка при генерации HLS сегментов: ${error.message}`);
+  }
+};
+
+// Экспортируем все функции как объект для удобства использования в маршрутах
+exports.hlsUtils = {
+  createHLSStream: exports.createHLSStream,
+  getAudioInfo: exports.getAudioInfo,
+  removeHLSStream: exports.removeHLSStream,
+  getManifestPath: exports.getManifestPath,
+  getSegmentPath: exports.getSegmentPath,
+  generateHlsSegments: exports.generateHlsSegments
+}; 

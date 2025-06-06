@@ -1,0 +1,286 @@
+/* ProfilePage.module.css */
+.profilePage {
+  padding-bottom: 40px;
+}
+
+.profileContainer {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.profileHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.profileAvatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-right: 30px;
+  flex-shrink: 0;
+}
+
+.avatarPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(45deg, #e0e0e0, #f5f5f5);
+  color: #999;
+}
+
+.profileTitle h1 {
+  margin: 0 0 8px 0;
+  font-size: 2rem;
+}
+
+.profileTitle p {
+  margin: 0;
+  color: #666;
+}
+
+.profileCard {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.cardHeader h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.headerActions {
+  display: flex;
+  gap: 10px;
+}
+
+.btnEdit, .btnPassword, .btnCancel {
+  background-color: #f0f0f0; /* Darker background */
+  color: #333; /* Dark text */
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btnEdit:hover, .btnPassword:hover, .btnCancel:hover {
+  background-color: #007bff; /* Blue on hover */
+  color: white;
+  border-color: #007bff;
+}
+
+.btnCancel {
+    background-color: #6c757d;
+    color: white;
+    border-color: #6c757d;
+}
+.btnCancel:hover {
+    background-color: #5a6268;
+    border-color: #545b62;
+}
+
+
+.formGroup {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.formGroup:last-child {
+  border-bottom: none;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.formGroup input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.formGroup input:disabled {
+  background: #f9f9f9;
+}
+
+.formGroup small {
+  display: block;
+  color: #999;
+  margin-top: 5px;
+}
+
+.formActions {
+  padding: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btnPrimary {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btnPrimary:hover {
+  background: #0069d9;
+}
+
+.profileInfo {
+  padding: 20px;
+}
+
+.infoGroup {
+  display: flex;
+  margin-bottom: 15px;
+}
+
+.infoGroup:last-child {
+  margin-bottom: 0;
+}
+
+.label {
+  min-width: 150px;
+  color: #666;
+}
+
+.value {
+  font-weight: 500;
+}
+
+.devicesList {
+  padding: 0;
+}
+
+.deviceItem {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.deviceItem:last-child {
+  border-bottom: none;
+}
+
+.deviceIcon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  border-radius: 50%;
+  margin-right: 20px;
+  color: #666;
+}
+
+.deviceInfo {
+  flex: 1;
+}
+
+.deviceName {
+  font-weight: 500;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+}
+
+.currentBadge {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  background: #4CAF50;
+  color: white;
+  border-radius: 20px;
+  margin-left: 10px;
+  font-weight: 400;
+}
+
+.deviceMeta {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.deviceDisconnect {
+  background: none;
+  border: none;
+  color: #dc3545;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.deviceDisconnect:hover {
+  background: #f8d7da;
+}
+
+.noDevices {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+}
+
+.error, .errorMessage {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.successMessage {
+  background: #d4edda;
+  color: #155724;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .profileHeader {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .profileAvatar {
+    margin-right: 0;
+    margin-bottom: 20px;
+  }
+  
+  .infoGroup {
+    flex-direction: column;
+  }
+  
+  .label {
+    margin-bottom: 5px;
+  }
+} 
