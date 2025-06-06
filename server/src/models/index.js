@@ -6,22 +6,42 @@ const config = require('../config');
 const basename = path.basename(__filename);
 const db = {};
 
-// Инициализация соединения с базой данных
-const sequelize = new Sequelize(
-  config.database.name,
-  config.database.user,
-  config.database.password,
-  {
-    host: config.database.host,
-    port: config.database.port,
+let sequelize;
+if (process.env.DATABASE_URL) {
+  // Для продакшена (Heroku, Render, etc.)
+  sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
-    logging: config.nodeEnv === 'development' ? console.log : false,
+    protocol: 'postgres',
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false // для Render
+      }
+    },
+    logging: false,
     define: {
       timestamps: true,
       underscored: true,
     },
-  }
-);
+  });
+} else {
+  // Для локальной разработки
+  sequelize = new Sequelize(
+    config.database.name,
+    config.database.user,
+    config.database.password,
+    {
+      host: config.database.host,
+      port: config.database.port,
+      dialect: 'postgres',
+      logging: config.nodeEnv === 'development' ? console.log : false,
+      define: {
+        timestamps: true,
+        underscored: true,
+      },
+    }
+  );
+}
 
 // Определим порядок загрузки моделей для соблюдения зависимостей
 const modelOrder = [

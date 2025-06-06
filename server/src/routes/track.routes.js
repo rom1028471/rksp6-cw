@@ -64,6 +64,13 @@ router.post(
         console.error('Ошибка загрузки файла:', err);
         return res.status(400).json({ message: 'Ошибка загрузки файла: ' + err.message });
       }
+
+      // Добавим проверку, что аудиофайл действительно был загружен
+      if (!req.files || !req.files['audio']) {
+        console.error('Файл не был загружен или поле называется не ‘audio’');
+        return res.status(400).json({ message: 'Аудиофайл обязателен' });
+      }
+
       console.log('Файлы успешно загружены');
       next();
     });

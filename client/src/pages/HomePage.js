@@ -13,7 +13,7 @@ const HomePage = () => {
   const baseApiUrl = (process.env.REACT_APP_API_URL || '').replace(/\/api$/, '');
 
   useEffect(() => {
-    // Загружаем только последние 3 трека вместо 10
+    // Загружаем только последние 3 трека 
     dispatch(fetchTracks({ limit: 3 }));
   }, [dispatch]);
 

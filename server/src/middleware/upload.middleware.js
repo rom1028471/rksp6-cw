@@ -1,30 +1,37 @@
 const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const cloudinary = require('cloudinary').v2;
+// const { CloudinaryStorage } = require('multer-storage-cloudinary');
+// const cloudinary = require('cloudinary').v2;
+const path = require('path');
+const fs = require('fs');
 
-// Конфигурация Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// Убедимся, что директории для загрузки существуют
+const audioDir = path.join(__dirname, '../../uploads/audio');
+const imageDir = path.join(__dirname, '../../uploads/images');
+if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true });
+if (!fs.existsSync(imageDir)) fs.mkdirSync(imageDir, { recursive: true });
 
-// Конфигурация хранилища для аудио файлов в Cloudinary
-const audioStorage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'audio',
-    resource_type: 'video', // Cloudinary treats audio as video
-    format: async (req, file) => 'mp3', // or other audio formats
+
+// Конфигурация Cloudinary - больше не используется
+// cloudinary.config({
+//   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+//   api_key: process.env.CLOUDINARY_API_KEY,
+//   api_secret: process.env.CLOUDINARY_API_SECRET,
+// });
+
+// Локальное хранилище для треков
+const trackStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    let dest;
+    if (file.fieldname === 'audio') {
+      dest = audioDir;
+    } else if (file.fieldname === 'cover') {
+      dest = imageDir;
+    }
+    cb(null, dest);
   },
-});
-
-// Конфигурация хранилища для изображений в Cloudinary
-const imageStorage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'images',
-    format: async (req, file) => 'webp',
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
   },
 });
 
@@ -52,7 +59,7 @@ const imageFileFilter = (req, file, cb) => {
 
 // Middleware для загрузки аудио файлов
 exports.uploadAudio = multer({
-  storage: audioStorage,
+  storage: trackStorage, // Используем локальное хранилище
   fileFilter: audioFileFilter,
   limits: {
     fileSize: 50 * 1024 * 1024, // 50 MB
@@ -61,7 +68,7 @@ exports.uploadAudio = multer({
 
 // Middleware для загрузки изображений
 exports.uploadImage = multer({
-  storage: imageStorage,
+  storage: trackStorage, // Используем локальное хранилище
   fileFilter: imageFileFilter,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5 MB
@@ -69,25 +76,25 @@ exports.uploadImage = multer({
 });
 
 // Middleware для загрузки трека (аудио + обложка)
-const trackStorage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: (req, file) => {
-        let folder;
-        let resource_type;
-        if (file.fieldname === 'audio') {
-            folder = 'audio';
-            resource_type = 'video';
-        } else if (file.fieldname === 'cover') {
-            folder = 'images';
-            resource_type = 'image';
-        }
-        return {
-            folder: folder,
-            resource_type: resource_type,
-            format: file.fieldname === 'audio' ? 'mp3' : 'webp'
-        };
-    },
-});
+// const trackStorageCloudinary = new CloudinaryStorage({
+//     cloudinary: cloudinary,
+//     params: (req, file) => {
+//         let folder;
+//         let resource_type;
+//         if (file.fieldname === 'audio') {
+//             folder = 'audio';
+//             resource_type = 'video';
+//         } else if (file.fieldname === 'cover') {
+//             folder = 'images';
+//             resource_type = 'image';
+//         }
+//         return {
+//             folder: folder,
+//             resource_type: resource_type,
+//             format: file.fieldname === 'audio' ? 'mp3' : 'webp'
+//         };
+//     },
+// });
 
 const trackFileFilter = (req, file, cb) => {
   if (file.fieldname === 'audio') {
@@ -110,7 +117,7 @@ const trackFileFilter = (req, file, cb) => {
 };
 
 exports.uploadTrackAndCover = multer({
-    storage: trackStorage,
+    storage: trackStorage, // Используем локальное хранилище
     fileFilter: trackFileFilter,
     limits: {
       fileSize: 50 * 1024 * 1024,

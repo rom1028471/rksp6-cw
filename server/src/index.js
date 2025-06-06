@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -64,6 +66,11 @@ const swaggerOptions = {
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).send('OK');
+});
 
 // Маршруты API
 app.use('/api/auth', authRoutes);
