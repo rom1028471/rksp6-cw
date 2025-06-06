@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { updateUserProfile, fetchUserDevices } from '../store/slices/authSlice';
 import { FaUser, FaLaptop, FaMobile, FaTablet, FaDesktop, FaTrash } from 'react-icons/fa';
 import styles from './ProfilePage.module.css';
+import apiClient from '../services/apiClient';
 
 const ProfilePage = () => {
   const dispatch = useDispatch();
@@ -121,11 +122,11 @@ const ProfilePage = () => {
         return setFormError('Пароли не совпадают');
       }
       
-      dispatch(updateUserProfile({
-        currentPassword: formData.currentPassword,
-        newPassword: formData.newPassword,
-      }))
-        .unwrap()
+      // Используем правильный путь для смены пароля
+      apiClient.put(`/users/${user.id}/password`, {
+        oldPassword: formData.currentPassword,
+        newPassword: formData.newPassword
+      })
         .then(() => {
           setFormSuccess('Пароль успешно изменен');
           setFormMode('view');
@@ -137,7 +138,7 @@ const ProfilePage = () => {
           });
         })
         .catch((err) => {
-          setFormError(err.message || 'Ошибка при изменении пароля');
+          setFormError(err.response?.data?.message || 'Ошибка при изменении пароля');
         });
     }
   };
@@ -181,6 +182,34 @@ const ProfilePage = () => {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  // Добавляем функцию для отключения устройства
+  const handleDisconnectDevice = async (device) => {
+    try {
+      const deviceId = device.device_id || device.deviceId;
+      console.log(`Отключение устройства:`, device);
+      
+      if (!deviceId) {
+        console.error('Отсутствует ID устройства:', device);
+        setFormError('Неверный ID устройства');
+        return;
+      }
+      
+      await apiClient.post(`/playback/disconnect`, { deviceId });
+      
+      // После успешного отключения, обновляем список устройств
+      if (user) {
+        dispatch(fetchUserDevices());
+      }
+      
+      setFormSuccess('Устройство успешно отключено');
+      setTimeout(() => setFormSuccess(null), 3000);
+    } catch (error) {
+      console.error('Ошибка при отключении устройства:', error);
+      setFormError(error.response?.data?.message || 'Ошибка при отключении устройства');
+      setTimeout(() => setFormError(null), 3000);
+    }
   };
 
   if (loading) {
@@ -346,7 +375,7 @@ const ProfilePage = () => {
                       <span>Последняя активность: {formatLastActive(device.lastActive)}</span>
                     </div>
                   </div>
-                  <button className={styles.deviceDisconnect} title="Отключить устройство">
+                  <button className={styles.deviceDisconnect} title="Отключить устройство" onClick={() => handleDisconnectDevice(device)}>
                     <FaTrash />
                   </button>
                 </div>

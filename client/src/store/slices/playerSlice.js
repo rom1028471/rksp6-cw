@@ -21,12 +21,22 @@ const playerSlice = createSlice({
   reducers: {
     setInitialTrack: (state, action) => {
       const { track, position } = action.payload;
+      if (!track) return;
+      
+      console.log('setInitialTrack: установка начального трека и позиции', { 
+        track: track.title, 
+        position: position 
+      });
+      
       state.queue = [track];
+      state.originalQueue = [track];
       state.currentTrack = track;
       state.currentTrackId = track.id;
-      state.currentTime = position;
-      state.isPlaying = false; // Важно: не начинаем играть автоматически
-      state.duration = track.duration;
+      state.currentTime = position || 0;
+      state.isPlaying = false; // Не воспроизводим автоматически при загрузке последнего трека
+      if (track.duration) {
+        state.duration = track.duration;
+      }
     },
     // Установка текущего трека и очереди
     setQueue: (state, action) => {
@@ -132,7 +142,22 @@ const playerSlice = createSlice({
     },
     
     // Сброс плеера
-    resetPlayer: () => initialState,
+    resetPlayer: () => {
+      console.log('Полный сброс плеера');
+      return initialState;
+    },
+    
+    // Очистка данных текущего трека, но сохранение настроек
+    clearCurrentTrack: (state) => {
+      console.log('Очистка текущего трека');
+      state.currentTrack = null;
+      state.currentTrackId = null;
+      state.currentTime = 0;
+      state.isPlaying = false;
+      state.queue = [];
+      state.originalQueue = [];
+      state.duration = 0;
+    },
 
     setDuration: (state, action) => {
       state.duration = action.payload;
@@ -151,6 +176,7 @@ export const {
   playNextTrack,
   playPreviousTrack,
   resetPlayer,
+  clearCurrentTrack,
   setDuration
 } = playerSlice.actions;
 

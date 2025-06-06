@@ -8,15 +8,16 @@ import Player from './Player';
  * Основной макет приложения, включающий навигацию, плеер и контент
  */
 const Layout = () => {
-  const { currentTrack } = useSelector((state) => state.player);
+  const { user } = useSelector((state) => state.auth);
   
   return (
     <div className="app">
       <Navbar />
-      <main className="container" style={{ paddingBottom: currentTrack ? '80px' : '20px' }}>
+      <main className="container" style={{ paddingBottom: '80px' }}>
         <Outlet />
       </main>
-      {currentTrack && <Player />}
+      {/* Отображаем плеер всегда, для неавторизованных - с просьбой авторизоваться */}
+      <Player />
     </div>
   );
 };

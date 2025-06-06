@@ -12,6 +12,8 @@ import {
   FaRedoAlt,
   FaCloudDownloadAlt,
   FaCloudUploadAlt,
+  FaSyncAlt,
+  FaMusic,
 } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import { 
@@ -22,6 +24,7 @@ import {
   toggleShuffle,
   toggleLoop,
   setQueue,
+  setInitialTrack,
 } from '../store/slices/playerSlice';
 import { updatePlaybackPosition } from '../store/slices/playbackSlice';
 import playbackSyncService from '../services/playbackSync.service';
@@ -52,6 +55,7 @@ const Player = () => {
   const { user } = useSelector((state) => state.auth);
   const { deviceId, isOnline } = useSelector((state) => state.device);
   const hlsInstanceRef = useRef(null);
+  const syncInterval = useRef(null);
 
   const handleTimeUpdate = useCallback(() => {
     const audio = audioRef.current;
@@ -144,6 +148,7 @@ const Player = () => {
     return `${baseUrl}${coverPathProperty}`;
   }, []); // Нет зависимостей, если REACT_APP_API_URL не меняется
 
+  // Вспомогательная функция для форматирования времени
   const formatTime = (seconds) => {
     if (isNaN(seconds) || seconds < 0) seconds = 0;
     const mins = Math.floor(seconds / 60);
@@ -289,8 +294,15 @@ const Player = () => {
     // Определяем функции-обработчики событий заранее
     const handleAudioLoadedMetadata = () => {
       console.log('[Player.js] Event: loadedmetadata. Duration:', audioRef.current?.duration);
-      if (audioRef.current && currentTime > 0 && currentTime < audioRef.current.duration) {
-         audioRef.current.currentTime = currentTime;
+      if (audioRef.current && currentTime > 0) {
+        console.log('[Player.js] Устанавливаем начальную позицию:', currentTime);
+        // Задержка перед установкой начальной позиции для надежности
+        setTimeout(() => {
+          if (audioRef.current) {
+            audioRef.current.currentTime = currentTime;
+            console.log('[Player.js] Начальная позиция установлена:', currentTime);
+          }
+        }, 500);
       }
     };
     const handleAudioCanPlay = () => console.log('[Player.js] Event: canplay');
@@ -338,6 +350,63 @@ const Player = () => {
       }
     };
   }, [currentTrack, user, dispatch]);
+
+  // Загрузка последней позиции воспроизведения при монтировании
+  useEffect(() => {
+    // Запускаем только при первом монтировании и если пользователь авторизован
+    if (user && deviceId && !currentTrack) {
+      // Создаем ключ для текущей сессии пользователя
+      const sessionKey = `last-user-${user.id}`;
+      const lastLoadedUserKey = sessionStorage.getItem('current-playback-user');
+      
+      // Проверяем, загружали ли мы уже треки для этого пользователя
+      if (lastLoadedUserKey === sessionKey) {
+        console.log('[Player.js] Уже загружали треки для этого пользователя, пропускаем');
+        return;
+      }
+      
+      console.log('[Player.js] Пытаемся загрузить последнюю позицию воспроизведения для пользователя:', user.id);
+      
+      // Запоминаем, что загружаем треки для текущего пользователя
+      sessionStorage.setItem('current-playback-user', sessionKey);
+      
+      playbackSyncService.getLastPosition()
+        .then(data => {
+          if (data && data.track) {
+            console.log('[Player.js] Загружена последняя позиция для пользователя', user.id, ':', data);
+            
+            // Проверяем, принадлежит ли трек текущему пользователю или является публичным
+            const trackUserId = data.track.user_id || data.track.userId;
+            const isOwnerOrPublic = trackUserId === user.id || data.track.is_public;
+            
+            if (isOwnerOrPublic) {
+              dispatch(setInitialTrack({
+                track: data.track,
+                position: data.position || 0
+              }));
+            } else {
+              console.log('[Player.js] Трек не принадлежит текущему пользователю и не является публичным, не загружаем его');
+            }
+          } else {
+            console.log('[Player.js] Нет сохраненной позиции воспроизведения для пользователя', user.id);
+          }
+        })
+        .catch(err => {
+          console.error('[Player.js] Ошибка при загрузке последней позиции:', err);
+        });
+    }
+
+    // Настройка периодического сохранения позиции
+    if (user && deviceId) {
+      console.log('[Player.js] Запуск периодического сохранения позиции для пользователя', user.id);
+      const stopSaving = playbackSyncService.startPeriodicSave();
+      
+      return () => {
+        console.log('[Player.js] Остановка периодического сохранения позиции');
+        if (stopSaving) stopSaving();
+      };
+    }
+  }, [user, deviceId, dispatch, currentTrack]);
 
   // Обработчик воспроизведения/паузы
   useEffect(() => {
@@ -462,109 +531,171 @@ const Player = () => {
   const coverArt = currentTrack ? getCoverPath(currentTrack.cover_path || currentTrack.coverPath) : '/default-cover.jpg';
 
   // Логика отображения
-  if (!user && currentTrack) {
-    // Пользователь не авторизован, но пытается воспроизвести трек
+  if (!user) {
+    // Если пользователь не авторизован, показываем сообщение о необходимости авторизации
     return (
-      <div className={styles.authRequiredMessageContainer}>
-        <p>Пожалуйста, <Link to="/login">войдите</Link> или <Link to="/register">зарегистрируйтесь</Link>, чтобы слушать музыку.</p>
+      <div className={styles.playerContainer}>
+        <div className={styles.authRequiredMessageContainer}>
+          <p>Пожалуйста, <Link to="/login">войдите</Link> или <Link to="/register">зарегистрируйтесь</Link>, чтобы слушать музыку.</p>
+        </div>
       </div>
     );
   }
 
-  if (!currentTrack || !user) { // Если трека нет ИЛИ пользователь не авторизован (и трек не выбран, т.к. предыдущий if не сработал)
-    return null; // Не отображаем плеер
-  }
-
-  // Если пользователь авторизован и есть трек, отображаем плеер
-  return (
-    <div className={styles.playerContainer}>
-      <audio 
-        ref={audioRef}
-        onTimeUpdate={updateProgress}
-        onEnded={handleTrackEnded}
-      />
-      
-      {/* Левая часть: информация о треке */}
-      <div className={styles.trackInfo}>
-        <img src={coverArt} alt={currentTrack?.title || 'Cover'} className={styles.coverArt} />
-        <div>
-          <div className={styles.title}>{currentTrack?.title || 'Трек не выбран'}</div>
-          <div className={styles.artist}>{currentTrack?.artist || '-'}</div>
-        </div>
-      </div>
-
-      {/* Центральная часть: управление и прогресс */}
-      <div className={styles.playerControls}>
-        <div className={styles.controlButtons}>
-          <button 
-            className={`${styles.controlButton} ${isShuffled ? styles.active : ''}`}
-            onClick={handleToggleShuffle}
-            title={isShuffled ? 'Отключить перемешивание' : 'Включить перемешивание'}
-          >
-            <FaRandom />
-          </button>
-          <button className={styles.controlButton} onClick={handlePrevious} title="Предыдущий трек">
-            <FaStepBackward />
-          </button>
-          <button 
-            className={`${styles.controlButton} ${styles.playPause}`}
-            onClick={togglePlay} 
-            title={isPlaying ? 'Пауза' : 'Воспроизвести'}
-            disabled={!currentTrack} // Блокируем кнопку, если трека нет
-          >
-            {isPlaying ? <FaPause /> : <FaPlay />}
-          </button>
-          <button className={styles.controlButton} onClick={handleNext} title="Следующий трек">
-            <FaStepForward />
-          </button>
-          <button 
-            className={`${styles.controlButton} ${isLooped ? styles.active : ''}`}
-            onClick={handleToggleLoop}
-            title={isLooped ? 'Отключить повтор' : 'Включить повтор'}
-          >
-            <FaRedoAlt />
-          </button>
-        </div>
-        <div className={styles.progressBarContainer}>
-          <span className={styles.time}>{formatTime(currentTime)}</span>
-          <div 
-            className={styles.progressBar}
-            ref={progressBarRef} 
-            onClick={handleProgressClick}
-          >
-            <div ref={progressRef} className={styles.progress}></div>
+  if (user && currentTrack) {
+    // Пользователь авторизован и есть трек, показываем полный плеер
+    return (
+      <div className={styles.playerContainer}>
+        <audio 
+          ref={audioRef}
+          onTimeUpdate={updateProgress}
+          onEnded={handleTrackEnded}
+        />
+        
+        {/* Левая часть: информация о треке */}
+        <div className={styles.trackInfo}>
+          <img src={coverArt} alt={currentTrack?.title || 'Cover'} className={styles.coverArt} />
+          <div>
+            <div className={styles.title}>{currentTrack?.title || 'Трек не выбран'}</div>
+            <div className={styles.artist}>{currentTrack?.artist || '-'}</div>
           </div>
-          <span className={styles.time}>{formatTime(audioRef.current?.duration)}</span>
         </div>
-      </div>
 
-      {/* Правая часть: громкость и доп. действия (если нужны) */}
-      <div className={styles.rightControls}>
-        <div className={styles.volumeControls}>
-          <button className={styles.controlButton} onClick={toggleMute} title={isMuted ? 'Включить звук' : 'Выключить звук'}>
-            {isMuted || volume === 0 ? <FaVolumeMute /> : <FaVolumeUp />}
-          </button>
-          <input 
-            type="range" 
-            min="0" 
-            max="1" 
-            step="0.01" 
-            value={isMuted ? 0 : volume} 
-            onChange={handleVolumeChange} 
-            className={styles.volumeSlider}
-          />
+        {/* Центральная часть: управление и прогресс */}
+        <div className={styles.playerControls}>
+          <div className={styles.controlButtons}>
+            <button 
+              className={`${styles.controlButton} ${isShuffled ? styles.active : ''}`}
+              onClick={handleToggleShuffle}
+              title={isShuffled ? 'Отключить перемешивание' : 'Включить перемешивание'}
+            >
+              <FaRandom />
+            </button>
+            <button className={styles.controlButton} onClick={handlePrevious} title="Предыдущий трек">
+              <FaStepBackward />
+            </button>
+            <button 
+              className={`${styles.controlButton} ${styles.playPause}`}
+              onClick={togglePlay} 
+              title={isPlaying ? 'Пауза' : 'Воспроизвести'}
+            >
+              {isPlaying ? <FaPause /> : <FaPlay />}
+            </button>
+            <button className={styles.controlButton} onClick={handleNext} title="Следующий трек">
+              <FaStepForward />
+            </button>
+            <button 
+              className={`${styles.controlButton} ${isLooped ? styles.active : ''}`}
+              onClick={handleToggleLoop}
+              title={isLooped ? 'Отключить повтор' : 'Включить повтор'}
+            >
+              <FaRedoAlt />
+            </button>
+          </div>
+          <div className={styles.progressBarContainer}>
+            <span className={styles.time}>{formatTime(currentTime)}</span>
+            <div 
+              className={styles.progressBar}
+              ref={progressBarRef} 
+              onClick={handleProgressClick}
+            >
+              <div ref={progressRef} className={styles.progress}></div>
+            </div>
+            <span className={styles.time}>{formatTime(audioRef.current?.duration)}</span>
+          </div>
         </div>
-        {/* <div className={styles.playerActions}> // Закомментируем или удалим этот блок целиком
-          <button className="action-button" onClick={handleDownloadTrack} title="Скачать для офлайн прослушивания">
-            {isDownloading ? <FaCloudDownloadAlt className="downloading" /> : 
-             isCached ? <FaCloudDownloadAlt /> : 
-             !isOnline ? <FaCloudUploadAlt /> : <FaCloudDownloadAlt />}
-          </button>
-          // <PlayerControlPanel /> // <--- Удаляем или комментируем вызов PlayerControlPanel
-        </div> */}
+
+        {/* Правая часть: громкость и доп. действия */}
+        <div className={styles.rightControls}>
+          <div className={styles.volumeControls}>
+            <button className={styles.controlButton} onClick={toggleMute} title={isMuted ? 'Включить звук' : 'Выключить звук'}>
+              {isMuted || volume === 0 ? <FaVolumeMute /> : <FaVolumeUp />}
+            </button>
+            <input 
+              type="range" 
+              min="0" 
+              max="1" 
+              step="0.01" 
+              value={isMuted ? 0 : volume} 
+              onChange={handleVolumeChange} 
+              className={styles.volumeSlider}
+            />
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  } else {
+    // Пользователь авторизован, но нет трека - показываем пустой плеер
+    return (
+      <div className={styles.playerContainer}>
+        <div className={styles.trackInfo}>
+          <div className={styles.coverArtPlaceholder}>
+            <FaMusic size={32} />
+          </div>
+          <div>
+            <div className={styles.title}>Трек не выбран</div>
+            <div className={styles.artist}>Выберите трек для воспроизведения</div>
+          </div>
+        </div>
+
+        <div className={styles.playerControls}>
+          <div className={styles.controlButtons}>
+            <button 
+              className={styles.controlButton}
+              disabled
+              title="Перемешать"
+            >
+              <FaRandom />
+            </button>
+            <button className={styles.controlButton} disabled title="Предыдущий трек">
+              <FaStepBackward />
+            </button>
+            <button 
+              className={`${styles.controlButton} ${styles.playPause}`}
+              disabled
+              title="Воспроизвести"
+            >
+              <FaPlay />
+            </button>
+            <button className={styles.controlButton} disabled title="Следующий трек">
+              <FaStepForward />
+            </button>
+            <button 
+              className={styles.controlButton}
+              disabled
+              title="Повторять"
+            >
+              <FaRedoAlt />
+            </button>
+          </div>
+          <div className={styles.progressBarContainer}>
+            <span className={styles.time}>0:00</span>
+            <div className={styles.progressBar}>
+              <div className={styles.progress} style={{width: '0%'}}></div>
+            </div>
+            <span className={styles.time}>0:00</span>
+          </div>
+        </div>
+
+        <div className={styles.rightControls}>
+          <div className={styles.volumeControls}>
+            <button className={styles.controlButton} disabled title="Громкость">
+              <FaVolumeUp />
+            </button>
+            <input 
+              type="range" 
+              min="0" 
+              max="1" 
+              step="0.01" 
+              value={volume} 
+              disabled
+              className={styles.volumeSlider}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 };
 
 export default Player; 

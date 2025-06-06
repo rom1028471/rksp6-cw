@@ -9,30 +9,45 @@ const { Op } = Sequelize;
  */
 router.get('/position', checkAuth({ required: true }), async (req, res) => {
   try {
-    const { userId, deviceId } = req.query;
+    // Используем только ID пользователя из JWT токена, игнорируем userId из запроса
+    const userId = req.user.id;
+    const { deviceId } = req.query;
     
-    // Проверка прав доступа
-    if (req.user.id !== parseInt(userId)) {
-      return res.status(403).json({ message: 'Нет доступа к данным этого пользователя' });
-    }
+    console.log(`Получение позиции для пользователя ${userId}, устройство: ${deviceId}`);
 
     // Находим последнюю активную запись воспроизведения для пользователя
     const latestPosition = await PlaybackPosition.findOne({
       where: {
         userId: userId,
-        deviceId: { [Op.ne]: deviceId } // Любое устройство кроме текущего
       },
       order: [['updatedAt', 'DESC']],
-      include: [{ model: Track }]
+      include: [{ 
+        model: Track,
+        // Добавляем проверку, что трек принадлежит пользователю или публичный
+        where: {
+          [Op.or]: [
+            { user_id: userId },
+            { userId: userId },
+            { is_public: true }
+          ]
+        }
+      }]
     });
 
-    if (!latestPosition) {
+    if (!latestPosition || !latestPosition.Track) {
+      console.log(`Не найдена позиция воспроизведения для пользователя ${userId}`);
       return res.json({
         track: null,
         position: 0,
         isPlaying: false
       });
     }
+
+    console.log(`Найдена позиция для пользователя ${userId}:`, {
+      trackId: latestPosition.trackId,
+      trackTitle: latestPosition.Track.title,
+      position: latestPosition.position
+    });
 
     // Обновляем время последней активности пользователя
     await User.update(
@@ -58,11 +73,19 @@ router.get('/position', checkAuth({ required: true }), async (req, res) => {
  */
 router.post('/position', checkAuth({ required: true }), async (req, res) => {
   try {
-    const { userId, deviceId, trackId, position, isPlaying } = req.body;
+    // Берем ID пользователя из токена
+    const userId = req.user.id;
+    const { deviceId, trackId, position, isPlaying } = req.body;
     
-    // Проверка прав доступа
-    if (req.user.id !== parseInt(userId)) {
-      return res.status(403).json({ message: 'Нет доступа к данным этого пользователя' });
+    console.log(`Сохранение позиции для пользователя ${userId}:`, {
+      deviceId, trackId, position, isPlaying
+    });
+
+    // Проверка существования трека
+    const track = await Track.findByPk(trackId);
+    if (!track) {
+      console.error(`Трек с ID ${trackId} не найден`);
+      return res.status(404).json({ message: 'Трек не найден' });
     }
 
     // Находим или создаем запись о позиции воспроизведения
@@ -101,6 +124,7 @@ router.post('/position', checkAuth({ required: true }), async (req, res) => {
       { where: { user_id: userId, device_id: deviceId } }
     );
 
+    console.log('Позиция успешно сохранена');
     res.json({
       message: 'Позиция воспроизведения успешно сохранена',
       playbackPosition
@@ -197,6 +221,26 @@ router.post('/disconnect', checkAuth({ required: true }), async (req, res) => {
     const { deviceId } = req.body;
     const userId = req.user.id;
     
+    console.log('Отключение устройства:', { userId, deviceId });
+    
+    if (!deviceId) {
+      console.error('Ошибка: deviceId не указан в запросе');
+      return res.status(400).json({ message: 'Необходимо указать deviceId' });
+    }
+
+    // Поиск устройства по device_id
+    const device = await UserDevice.findOne({
+      where: {
+        device_id: deviceId,
+        user_id: userId
+      }
+    });
+
+    if (!device) {
+      console.error('Устройство не найдено:', { deviceId, userId });
+      return res.status(404).json({ message: 'Устройство не найдено' });
+    }
+
     // Останавливаем воспроизведение на устройстве
     const playbackPosition = await PlaybackPosition.findOne({
       where: {
@@ -209,15 +253,22 @@ router.post('/disconnect', checkAuth({ required: true }), async (req, res) => {
       await playbackPosition.update({
         isPlaying: false
       });
+      console.log('Воспроизведение остановлено для устройства:', deviceId);
+    } else {
+      console.log('Не найдена позиция воспроизведения для устройства:', deviceId);
     }
-    
+
     res.json({
       message: 'Устройство успешно отключено от синхронизации',
-      deviceId
+      deviceId: deviceId,
+      deviceName: device.device_name
     });
   } catch (error) {
     console.error('Ошибка при отключении устройства:', error);
-    res.status(500).json({ message: 'Ошибка сервера' });
+    res.status(500).json({ 
+      message: 'Ошибка сервера при отключении устройства',
+      error: error.message
+    });
   }
 });
 
@@ -262,6 +313,23 @@ router.get('/active-sessions', checkAuth({ required: true }), async (req, res) =
     res.json(activeSessions);
   } catch (error) {
     console.error('Ошибка при получении активных сессий:', error);
+    res.status(500).json({ message: 'Ошибка сервера' });
+  }
+});
+
+/**
+ * Сброс состояния воспроизведения для клиента
+ */
+router.post('/reset', (req, res) => {
+  try {
+    console.log('Клиент запросил сброс состояния воспроизведения');
+    // Этот маршрут просто подтверждает запрос, фактический сброс происходит на клиенте
+    res.json({
+      message: 'Состояние воспроизведения сброшено',
+      success: true
+    });
+  } catch (error) {
+    console.error('Ошибка при сбросе состояния воспроизведения:', error);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 });

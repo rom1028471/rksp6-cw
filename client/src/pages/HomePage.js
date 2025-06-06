@@ -13,8 +13,8 @@ const HomePage = () => {
   const baseApiUrl = (process.env.REACT_APP_API_URL || '').replace(/\/api$/, '');
 
   useEffect(() => {
-    // Загружаем последние 10 треков
-    dispatch(fetchTracks({ limit: 10 }));
+    // Загружаем только последние 3 трека вместо 10
+    dispatch(fetchTracks({ limit: 3 }));
   }, [dispatch]);
 
   const handlePlayTrack = (track) => {
@@ -42,7 +42,7 @@ const HomePage = () => {
         {tracksLoading ? (
           <div className={styles.loading}>Загрузка треков...</div>
         ) : tracks.length > 0 ? (
-          <div className={styles['tracks-grid']}>
+          <div className={styles['tracks-grid-three']}>
             {tracks.map((track) => (
               <div key={track.id} className={styles['track-card']}>
                 <div className={styles['track-image']}>
@@ -56,13 +56,14 @@ const HomePage = () => {
                   <button 
                     className={styles['play-button']}
                     onClick={() => handlePlayTrack(track)}
+                    aria-label={`Воспроизвести ${track.title}`}
                   >
                     <FaPlay />
                   </button>
                 </div>
                 <div className={styles['track-info']}>
                   <div className={styles['track-title']}>{track.title}</div>
-                  <div className={styles['track-artist']}>{track.user.username}</div>
+                  <div className={styles['track-artist']}>{track.artist || track.user.username}</div>
                 </div>
               </div>
             ))}

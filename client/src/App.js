@@ -44,19 +44,48 @@ function App() {
     if (token) {
       dispatch(checkAuth()).then((action) => {
         if (checkAuth.fulfilled.match(action) && action.payload) {
-          const { id: userId, deviceId } = action.payload;
-          if (userId && deviceId) {
-            dispatch(fetchPlaybackPosition({ userId, deviceId }))
-              .unwrap()
-              .then((playbackState) => {
-                if (playbackState && playbackState.track) {
-                  dispatch(setInitialTrack({
-                    track: playbackState.track,
-                    position: playbackState.position,
-                  }));
-                }
-              })
-              .catch(err => console.error("Failed to fetch playback position:", err));
+          const { user } = action.payload;
+          const { deviceId } = action.payload;
+          
+          console.log('Пользователь авторизован:', user);
+          console.log('ID устройства:', deviceId);
+          
+          if (user && user.id && deviceId) {
+            // Создадим ключ сессии, чтобы отслеживать изменения пользователя
+            const sessionKey = `last-user-${user.id}`;
+            const lastLoadedUserKey = sessionStorage.getItem('current-playback-user');
+            
+            // Если это новый пользователь или первая загрузка
+            if (lastLoadedUserKey !== sessionKey) {
+              console.log('Первый вход пользователя в этой сессии, загружаем последнюю позицию...');
+              sessionStorage.setItem('current-playback-user', sessionKey);
+              
+              // Задержка для гарантии что все хорошо инициализировалось
+              setTimeout(() => {
+                playbackSyncService.getLastPosition()
+                  .then((data) => {
+                    console.log('Получены данные о последней позиции:', data);
+                    if (data && data.track) {
+                      console.log('Устанавливаем последний трек и позицию:', {
+                        track: data.track.title,
+                        position: data.position
+                      });
+                      
+                      dispatch(setInitialTrack({
+                        track: data.track,
+                        position: data.position || 0
+                      }));
+                    } else {
+                      console.log('Нет данных о последней позиции');
+                    }
+                  })
+                  .catch((error) => {
+                    console.error('Ошибка при загрузке последней позиции:', error);
+                  });
+              }, 2000); // Увеличиваем задержку до 2 секунд для гарантии
+            } else {
+              console.log('Уже загружали данные для этого пользователя в этой сессии');
+            }
           }
         }
       });

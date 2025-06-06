@@ -19,17 +19,23 @@ import styles from './Navbar.module.css';
  */
 const Navbar = () => {
   const user = useSelector((state) => state.auth.user);
+  const deviceId = useSelector((state) => state.device.deviceId);
+  const currentTrack = useSelector((state) => state.player.currentTrack);
+  const currentTime = useSelector((state) => state.player.currentTime);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
+    console.log('Инициирован выход из аккаунта');
+    
     try {
-      await playbackSyncService.saveFinalPosition();
+      // Вызываем performLogout, который уже выполнит сохранение позиции
+      await dispatch(performLogout()).unwrap();
+      console.log('Выход выполнен успешно');
+      navigate('/login');
     } catch (error) {
-      console.error('Failed to save final position on logout:', error);
-      // Ошибку логируем, но выход из системы не прерываем
-    } finally {
-      dispatch(performLogout());
+      console.error('Ошибка при выходе из аккаунта:', error);
+      // В любом случае перенаправляем на страницу логина
       navigate('/login');
     }
   };

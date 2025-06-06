@@ -69,6 +69,34 @@
   gap: 20px;
 }
 
+/* Новый стиль для крупных карточек (по 1 в строку) */
+.tracks-grid-large {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+/* Стиль для отображения 3 карточек в строку на больших экранах */
+.tracks-grid-three {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+/* Адаптивность для средних экранов - 2 карточки в строку */
+@media (max-width: 992px) {
+  .tracks-grid-three {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Адаптивность для маленьких экранов - 1 карточка в строку */
+@media (max-width: 576px) {
+  .tracks-grid-three {
+    grid-template-columns: 1fr;
+  }
+}
+
 .track-card {
   background: white;
   border-radius: 6px;
@@ -80,9 +108,28 @@
   text-decoration: none;
 }
 
+/* Стиль для крупных карточек */
+.track-card-large {
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: row;
+  color: inherit;
+  text-decoration: none;
+  height: 180px;
+}
+
 .track-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.track-card-large:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 .track-image {
@@ -91,7 +138,17 @@
   overflow: hidden;
 }
 
-.track-image img {
+/* Стиль для изображения в крупных карточках */
+.track-image-large {
+  width: 180px;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.track-image img,
+.track-image-large img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -121,9 +178,13 @@
   align-items: center;
   justify-content: center;
   transition: transform 0.2s;
+  border: none;
+  cursor: pointer;
+  padding: 0;
 }
 
-.track-card:hover .play-button {
+.track-card:hover .play-button,
+.track-card-large:hover .play-button {
   transform: translate(-50%, -50%) scale(1);
 }
 
@@ -131,16 +192,70 @@
   padding: 15px;
 }
 
+/* Стиль для информации в крупных карточках */
+.track-info-large {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex-grow: 1;
+}
+
 .track-title {
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.track-info-large .track-title {
+  font-size: 1.4rem;
+  margin-bottom: 10px;
+}
+
 .track-artist {
   font-size: 0.9rem;
   color: #666;
+}
+
+.track-info-large .track-artist {
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+
+.track-details {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #777;
+}
+
+.track-genre {
+  background-color: #f0f0f0;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.track-duration {
+  font-weight: 500;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+  .track-card-large {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .track-image-large {
+    width: 100%;
+    height: 180px;
+  }
+  
+  .track-info-large {
+    padding: 15px;
+  }
 }
 
 .loading, .no-content {

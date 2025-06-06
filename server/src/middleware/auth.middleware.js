@@ -76,6 +76,26 @@ const ownerMiddleware = (model) => {
         return next();
       }
       
+      // Если модель - User, проверяем только соответствие пользователей
+      if (model.name === 'User') {
+        console.log('[OWNER] Проверка доступа к собственному профилю пользователя');
+        
+        // Преобразуем оба ID в числа для сравнения
+        const requestedUserId = parseInt(id, 10);
+        const currentUserId = parseInt(userId, 10);
+        
+        if (requestedUserId === currentUserId) {
+          console.log('[OWNER] Доступ предоставлен: запрос к собственному профилю');
+          return next();
+        } else {
+          console.error('[OWNER] Доступ запрещен: запрос к чужому профилю', {
+            requestedUserId,
+            currentUserId
+          });
+          return res.status(403).json({ message: 'Нет доступа к этому профилю' });
+        }
+      }
+      
       const resource = await model.findByPk(id);
       
       if (!resource) {
@@ -96,8 +116,17 @@ const ownerMiddleware = (model) => {
         ownerIdFromUser_id
       });
       
+      // Преобразуем все значения в числа для корректного сравнения
+      const numUserId = parseInt(userId, 10);
+      const numOwnerIdFromUserId = parseInt(ownerIdFromUserId, 10);
+      const numOwnerIdFromUser_id = parseInt(ownerIdFromUser_id, 10);
+      
       // Проверяем владельца используя все возможные поля
-      const isOwner = (ownerIdFromUserId === userId || ownerIdFromUser_id === userId);
+      const isOwner = (
+        !isNaN(numUserId) && 
+        (!isNaN(numOwnerIdFromUserId) && numOwnerIdFromUserId === numUserId) || 
+        (!isNaN(numOwnerIdFromUser_id) && numOwnerIdFromUser_id === numUserId)
+      );
       
       if (isOwner) {
         console.log('[OWNER] Доступ предоставлен: пользователь является владельцем');

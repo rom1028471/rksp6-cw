@@ -1,6 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import authService from '../../services/authService';
 import apiClient from '../../services/apiClient';
+import playbackSyncService from '../../services/playbackSync.service';
+import { resetPlayer } from './playerSlice';
 
 // Асинхронные действия (thunks)
 export const registerUser = createAsyncThunk(
@@ -215,12 +217,69 @@ const authSlice = createSlice({
 
 export const { logout, setCredentials, clearError, setOnlineStatus } = authSlice.actions;
 
-// Thunk для выполнения выхода
-export const performLogout = () => (dispatch) => {
-  localStorage.removeItem('token');
-  // Убираем токен из заголовков будущих запросов
-  delete apiClient.defaults.headers.common['Authorization'];
-  dispatch(logout());
-};
+// Выход из системы
+export const performLogout = createAsyncThunk(
+  'auth/logout',
+  async (_, { dispatch, getState }) => {
+    try {
+      // Получаем важные данные перед выходом из системы
+      const state = getState();
+      const { user } = state.auth;
+      const { deviceId } = state.device;
+      const { currentTrack, currentTime } = state.player;
+      
+      console.log('Выполняем выход из системы. Проверяем наличие активного трека:', 
+        currentTrack ? `${currentTrack.title} (${currentTime}с)` : 'Нет');
+      
+      // Только если есть пользователь, устройство и трек - сохраняем позицию
+      if (user && deviceId && currentTrack && currentTrack.id) {
+        try {
+          console.log('Сохраняем позицию перед выходом:', Math.floor(currentTime));
+          // Сохраняем позицию через сервис
+          await playbackSyncService.saveFinalPosition(true);
+          console.log('Позиция сохранена через playbackSyncService');
+          
+          // Дополнительно отправляем через прямой запрос API
+          try {
+            const response = await apiClient.post('/playback/position', {
+              deviceId,
+              trackId: currentTrack.id,
+              position: Math.floor(currentTime || 0),
+              isPlaying: false
+            });
+            console.log('Позиция дополнительно сохранена через API:', response.data);
+          } catch (apiError) {
+            console.warn('Не удалось сохранить позицию через API:', apiError);
+          }
+        } catch (syncError) {
+          console.error('Ошибка при сохранении позиции:', syncError);
+        }
+      }
+      
+      // Очищаем хранилище
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      sessionStorage.removeItem('current-playback-user');
+      
+      // Удаляем заголовок Authorization
+      delete apiClient.defaults.headers.common['Authorization'];
+      
+      // Сбрасываем состояние playbackSync сервиса
+      playbackSyncService.reset();
+      
+      // Сбрасываем плеер
+      dispatch(resetPlayer());
+      
+      // Диспатчим экшен logout из authSlice
+      dispatch(logout());
+      
+      console.log('Выход из системы выполнен успешно');
+      return null;
+    } catch (error) {
+      console.error('Ошибка при выходе:', error);
+      return null;
+    }
+  }
+);
 
 export default authSlice.reducer; 

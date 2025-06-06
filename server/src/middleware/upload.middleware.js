@@ -1,44 +1,31 @@
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const { v4: uuidv4 } = require('uuid');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('cloudinary').v2;
 
-// Конфигурация для загрузки аудио файлов
-const audioStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../uploads/audio');
-    
-    // Создаем директорию, если она не существует
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    // Генерируем уникальное имя файла
-    const uniqueFilename = `${uuidv4()}${path.extname(file.originalname)}`;
-    cb(null, uniqueFilename);
-  }
+// Конфигурация Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Конфигурация для загрузки изображений
-const imageStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../uploads/images');
-    
-    // Создаем директорию, если она не существует
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    
-    cb(null, uploadDir);
+// Конфигурация хранилища для аудио файлов в Cloudinary
+const audioStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'audio',
+    resource_type: 'video', // Cloudinary treats audio as video
+    format: async (req, file) => 'mp3', // or other audio formats
   },
-  filename: (req, file, cb) => {
-    // Генерируем уникальное имя файла
-    const uniqueFilename = `${uuidv4()}${path.extname(file.originalname)}`;
-    cb(null, uniqueFilename);
-  }
+});
+
+// Конфигурация хранилища для изображений в Cloudinary
+const imageStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'images',
+    format: async (req, file) => 'webp',
+  },
 });
 
 // Фильтр для аудио файлов
@@ -82,6 +69,26 @@ exports.uploadImage = multer({
 });
 
 // Middleware для загрузки трека (аудио + обложка)
+const trackStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: (req, file) => {
+        let folder;
+        let resource_type;
+        if (file.fieldname === 'audio') {
+            folder = 'audio';
+            resource_type = 'video';
+        } else if (file.fieldname === 'cover') {
+            folder = 'images';
+            resource_type = 'image';
+        }
+        return {
+            folder: folder,
+            resource_type: resource_type,
+            format: file.fieldname === 'audio' ? 'mp3' : 'webp'
+        };
+    },
+});
+
 const trackFileFilter = (req, file, cb) => {
   if (file.fieldname === 'audio') {
     const allowedMimeTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/flac'];
@@ -103,37 +110,15 @@ const trackFileFilter = (req, file, cb) => {
 };
 
 exports.uploadTrackAndCover = multer({
-  storage: multer.diskStorage({ // Используем общее хранилище или настроим по полю
-    destination: (req, file, cb) => {
-      let uploadDir;
-      if (file.fieldname === 'audio') {
-        uploadDir = path.join(__dirname, '../../uploads/audio');
-      } else if (file.fieldname === 'cover') {
-        uploadDir = path.join(__dirname, '../../uploads/images');
-      } else {
-        // Обработка случая с неизвестным полем, хотя фильтр должен это предотвратить
-        return cb(new Error('Unknown fieldname for storage'), null);
-      }
-      
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-      const uniqueFilename = `${uuidv4()}${path.extname(file.originalname)}`;
-      cb(null, uniqueFilename);
+    storage: trackStorage,
+    fileFilter: trackFileFilter,
+    limits: {
+      fileSize: 50 * 1024 * 1024,
     }
-  }),
-  fileFilter: trackFileFilter,
-  limits: {
-    fileSize: 50 * 1024 * 1024, // Общий лимит или можно задать по полям в роуте
-  }
 });
 
 // Middleware для обработки ошибок загрузки
-exports.handleUploadError = (req, res, next) => {
-  return (err, req, res, next) => {
+exports.handleUploadError = (err, req, res, next) => {
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({ message: 'Файл слишком большой' });
@@ -143,5 +128,4 @@ exports.handleUploadError = (req, res, next) => {
       return res.status(400).json({ message: err.message });
     }
     next();
-  };
 }; 
