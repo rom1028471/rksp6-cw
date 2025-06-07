@@ -7,9 +7,7 @@ import apiClient from '../services/apiClient';
 
 const ProfilePage = () => {
   const dispatch = useDispatch();
-  const { user, devices, loading, error, lastDevicesRequestTime } = useSelector((state) => state.auth);
-  const devicesRequestRef = useRef(false);
-  const initialRenderRef = useRef(true);
+  const { user, devices, loading, error } = useSelector((state) => state.auth);
   
   const [formData, setFormData] = useState({
     username: '',
@@ -22,7 +20,7 @@ const ProfilePage = () => {
   const [formMode, setFormMode] = useState('view'); // view, edit, password
   const [formError, setFormError] = useState(null);
   const [formSuccess, setFormSuccess] = useState(null);
-  const [localDevices, setLocalDevices] = useState([]);
+  const [hasLoadedDevices, setHasLoadedDevices] = useState(false);
   
   // Инициализация формы только при первом рендере или изменении пользователя
   useEffect(() => {
@@ -35,47 +33,20 @@ const ProfilePage = () => {
     }
   }, [user]);
   
-  // Отдельный эффект для загрузки устройств - выполняется только один раз
+  // Загружаем устройства только один раз при монтировании компонента
   useEffect(() => {
-    // Используем localDevices, если уже есть данные из редьюсера
-    if (devices && devices.length > 0) {
-      setLocalDevices(devices);
-      return;
-    }
-    
-    // Запрашиваем устройства только один раз при первом рендере
-    if (initialRenderRef.current && user && !devicesRequestRef.current) {
-      initialRenderRef.current = false;
+    // Используем локальный флаг для однократной загрузки
+    if (user?.id && !hasLoadedDevices) {
+      setHasLoadedDevices(true);
       
-      const now = Date.now();
-      const shouldFetchDevices = 
-        (!devices || devices.length === 0) && 
-        (!lastDevicesRequestTime || (now - lastDevicesRequestTime > 300000)); // 5 минут
+      // Небольшая задержка для предотвращения множественных запросов
+      const timer = setTimeout(() => {
+        dispatch(fetchUserDevices());
+      }, 100);
       
-      if (shouldFetchDevices) {
-        console.log('Загружаем устройства пользователя');
-        devicesRequestRef.current = true;
-        
-        // Запрос с большей задержкой, чтобы дать время другим компонентам загрузиться
-        setTimeout(() => {
-          dispatch(fetchUserDevices())
-            .then((result) => {
-              if (result.payload) {
-                setLocalDevices(result.payload);
-              }
-            })
-            .catch((err) => {
-              console.error('Ошибка загрузки устройств:', err);
-              // Установим пустой массив, чтобы не пытаться повторно загрузить
-              setLocalDevices([]);
-            })
-            .finally(() => {
-              devicesRequestRef.current = false;
-            });
-        }, 1000);
-      }
+      return () => clearTimeout(timer);
     }
-  }, [user, devices, dispatch, lastDevicesRequestTime]);
+  }, [user?.id, hasLoadedDevices, dispatch]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -158,7 +129,7 @@ const ProfilePage = () => {
   };
 
   const getDeviceIcon = (deviceType) => {
-    const deviceTypeLower = deviceType.toLowerCase();
+    const deviceTypeLower = deviceType?.toLowerCase() || '';
     if (deviceTypeLower.includes('mobile') || deviceTypeLower.includes('phone')) {
       return <FaMobile />;
     } else if (deviceTypeLower.includes('tablet')) {
@@ -170,55 +141,98 @@ const ProfilePage = () => {
     }
   };
   
-  // Форматируем дату последней активности
-  const formatLastActive = (dateString) => {
+  // Форматируем дату в удобочитаемый вид
+  const formatDate = (dateString) => {
     if (!dateString) return 'Неизвестно';
     
-    const date = new Date(dateString);
-    return date.toLocaleString('ru-RU', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  // Добавляем функцию для отключения устройства
-  const handleDisconnectDevice = async (device) => {
     try {
-      const deviceId = device.device_id || device.deviceId;
-      console.log(`Отключение устройства:`, device);
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Неверный формат даты';
       
-      if (!deviceId) {
-        console.error('Отсутствует ID устройства:', device);
-        setFormError('Неверный ID устройства');
-        return;
+      // Проверка на дату из будущего
+      const now = new Date();
+      if (date > now) {
+        return 'Только что';
       }
       
-      await apiClient.post(`/playback/disconnect`, { deviceId });
-      
-      // После успешного отключения, обновляем список устройств
-      if (user) {
-        dispatch(fetchUserDevices());
-      }
-      
-      setFormSuccess('Устройство успешно отключено');
-      setTimeout(() => setFormSuccess(null), 3000);
+      return date.toLocaleString('ru-RU', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
     } catch (error) {
-      console.error('Ошибка при отключении устройства:', error);
-      setFormError(error.response?.data?.message || 'Ошибка при отключении устройства');
-      setTimeout(() => setFormError(null), 3000);
+      console.error('Ошибка при форматировании даты:', error);
+      return 'Ошибка форматирования';
+    }
+  };
+  
+  // Получаем актуальную информацию о времени активности устройства
+  const getDeviceActivityInfo = (device) => {
+    // Проверяем даты на корректность
+    const isValidDate = (date) => {
+      if (!date) return false;
+      const parsedDate = new Date(date);
+      const now = new Date();
+      // Если дата из будущего или невалидная, считаем её некорректной
+      return !isNaN(parsedDate.getTime()) && parsedDate <= now;
+    };
+
+    const now = new Date();
+    
+    // Если устройство текущее, показываем "Сейчас в сети"
+    if (device.isCurrentDevice) {
+      return "Сейчас в сети";
+    }
+    
+    // Проверяем lastActive
+    if (isValidDate(device.lastActive)) {
+      return `Последний вход: ${formatDate(device.lastActive)}`;
+    } 
+    // Если lastActive отсутствует или некорректно, проверяем дату создания
+    else if (isValidDate(device.createdAt)) {
+      return `Зарегистрировано: ${formatDate(device.createdAt)}`;
+    }
+    // Если у устройства нет корректных дат, считаем что оно было создано сейчас
+    else {
+      return 'Зарегистрировано только что';
     }
   };
 
-  if (loading) {
+  if (loading && !devices?.length) {
     return <div className={styles.loading}>Загрузка данных...</div>;
   }
 
   if (!user) {
     return <div className={styles.error}>Пользователь не найден</div>;
   }
+
+  // Мемоизируем список устройств для предотвращения лишних рендеров
+  const devicesList = devices?.length > 0 ? (
+    <div className={styles.devicesList}>
+      {devices.map(device => (
+        <div key={device.id} className={styles.deviceItem}>
+          <div className={styles.deviceIcon}>
+            {getDeviceIcon(device.deviceType)}
+          </div>
+          <div className={styles.deviceInfo}>
+            <div className={styles.deviceName}>
+              {device.deviceName}
+              {device.isCurrentDevice && <span className={styles.currentBadge}>Текущее</span>}
+            </div>
+            <div className={styles.deviceMeta}>
+              <span>Дата регистрации: {formatDate(user.createdAt)}</span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div className={styles.noDevices}>
+      <p>Нет активных устройств</p>
+    </div>
+  );
 
   return (
     <div className={styles.profilePage}>
@@ -359,33 +373,7 @@ const ProfilePage = () => {
             <h2>Активные устройства</h2>
           </div>
           
-          {localDevices && localDevices.length > 0 ? (
-            <div className={styles.devicesList}>
-              {localDevices.map(device => (
-                <div key={device.id} className={styles.deviceItem}>
-                  <div className={styles.deviceIcon}>
-                    {getDeviceIcon(device.deviceType)}
-                  </div>
-                  <div className={styles.deviceInfo}>
-                    <div className={styles.deviceName}>
-                      {device.deviceName}
-                      {device.isCurrentDevice && <span className={styles.currentBadge}>Текущее</span>}
-                    </div>
-                    <div className={styles.deviceMeta}>
-                      <span>Последняя активность: {formatLastActive(device.lastActive)}</span>
-                    </div>
-                  </div>
-                  <button className={styles.deviceDisconnect} title="Отключить устройство" onClick={() => handleDisconnectDevice(device)}>
-                    <FaTrash />
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className={styles.noDevices}>
-              <p>Нет активных устройств</p>
-            </div>
-          )}
+          {devicesList}
         </div>
       </div>
     </div>

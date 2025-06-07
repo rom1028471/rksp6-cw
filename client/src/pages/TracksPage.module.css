@@ -77,6 +77,14 @@
 .options-menu button:hover { background-color: #f8f9fa; }
 .options-menu button svg { margin-right: 10px; }
 .options-menu button.delete { color: #dc3545; }
+.options-menu button:first-child { 
+  background-color: #212529; 
+  color: white;
+  border-radius: 4px 4px 0 0;
+}
+.options-menu button:first-child:hover { 
+  background-color: #343a40; 
+}
 
 .load-more-btn { display: block; margin: 30px auto; padding: 10px 25px; border-radius: 20px; border: 1px solid #ccc; cursor: pointer; }
 .message { padding: 40px; text-align: center; color: #777; font-size: 1.1em; }

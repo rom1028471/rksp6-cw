@@ -1,32 +1,30 @@
 module.exports = (sequelize, DataTypes) => {
   const PlaybackPosition = sequelize.define('PlaybackPosition', {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true
-    },
     userId: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      primaryKey: true,
       field: 'user_id',
       references: {
         model: 'users',
         key: 'id'
       }
     },
-    deviceId: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      field: 'device_id'
-    },
     trackId: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      primaryKey: true,
       field: 'track_id',
       references: {
         model: 'tracks',
         key: 'id'
       }
+    },
+    deviceId: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      primaryKey: true,
+      field: 'device_id'
     },
     position: {
       type: DataTypes.FLOAT,
@@ -59,17 +57,16 @@ module.exports = (sequelize, DataTypes) => {
         fields: ['track_id']
       },
       {
-        unique: true,
-        fields: ['user_id', 'device_id', 'track_id']
+        fields: ['device_id']
       }
     ]
   });
 
   // Ассоциации с другими моделями
   PlaybackPosition.associate = (models) => {
-    PlaybackPosition.belongsTo(models.User, { foreignKey: 'user_id' });
+    PlaybackPosition.belongsTo(models.User, { foreignKey: 'userId' });
     PlaybackPosition.belongsTo(models.Track, { 
-      foreignKey: 'track_id',
+      foreignKey: 'trackId',
       onDelete: 'CASCADE' 
     });
   };

@@ -1,12 +1,6 @@
 -- Скрипт инициализации базы данных для аудио-стриминга
 -- Используйте этот скрипт для создания базы данных и основных таблиц
 
--- Создание базы данных
-CREATE DATABASE audio_streaming;
-
--- Подключение к созданной базе данных
-\c audio_streaming;
-
 -- Создание таблицы пользователей
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
@@ -15,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
     role VARCHAR(50) DEFAULT 'user',
     avatar_path VARCHAR(255),
+    last_active TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -51,7 +46,6 @@ CREATE TABLE IF NOT EXISTS tracks (
 
 -- Создание таблицы для отслеживания позиции воспроизведения
 CREATE TABLE IF NOT EXISTS playback_positions (
-    id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     track_id INTEGER REFERENCES tracks(id) ON DELETE CASCADE,
     device_id VARCHAR(255) NOT NULL,
@@ -84,5 +78,20 @@ CREATE TRIGGER update_playback_positions_timestamp
 BEFORE UPDATE ON playback_positions
 FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 
--- Завершение скрипта
-COMMIT; 
+-- Создание таблицы сессий устройств
+CREATE TABLE IF NOT EXISTS device_sessions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    device_id VARCHAR(255) NOT NULL,
+    device_name VARCHAR(255),
+    device_type VARCHAR(255),
+    last_active TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    current_track_id INTEGER REFERENCES tracks(id) ON DELETE SET NULL,
+    current_position INTEGER DEFAULT 0,
+    is_playing BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Завершение скрипта 

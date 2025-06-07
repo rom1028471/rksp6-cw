@@ -349,7 +349,7 @@ const Player = () => {
         URL.revokeObjectURL(currentAudioElement.src);
       }
     };
-  }, [currentTrack, user, dispatch]);
+  }, [currentTrack, user?.id, dispatch]);
 
   // Загрузка последней позиции воспроизведения при монтировании
   useEffect(() => {
@@ -361,13 +361,13 @@ const Player = () => {
       
       // Проверяем, загружали ли мы уже треки для этого пользователя
       if (lastLoadedUserKey === sessionKey) {
-        console.log('[Player.js] Уже загружали треки для этого пользователя, пропускаем');
+        console.log('[Player.js] Уже была попытка загрузки для этого пользователя, пропускаем');
         return;
       }
       
       console.log('[Player.js] Пытаемся загрузить последнюю позицию воспроизведения для пользователя:', user.id);
       
-      // Запоминаем, что загружаем треки для текущего пользователя
+      // Запоминаем, что загружаем треки для текущего пользователя, ДО запроса
       sessionStorage.setItem('current-playback-user', sessionKey);
       
       playbackSyncService.getLastPosition()
@@ -406,7 +406,7 @@ const Player = () => {
         if (stopSaving) stopSaving();
       };
     }
-  }, [user, deviceId, dispatch, currentTrack]);
+  }, [user?.id, deviceId, dispatch, currentTrack]);
 
   // Обработчик воспроизведения/паузы
   useEffect(() => {

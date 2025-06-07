@@ -93,13 +93,16 @@ app.use((err, req, res, next) => {
 // Запуск сервера
 const PORT = config.port;
 
-db.sequelize.sync({ alter: process.env.NODE_ENV === 'development' })
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Сервер запущен на порту ${PORT}`);
-      console.log(`Swagger документация доступна по адресу: http://localhost:${PORT}/api-docs`);
-    });
-  })
-  .catch(err => {
-    console.error('Не удалось подключиться к базе данных:', err);
-  }); 
+app.listen(PORT, () => {
+  console.log(`Сервер запущен на порту ${PORT}`);
+  console.log(`Swagger документация доступна по адресу: http://localhost:${PORT}/api-docs`);
+});
+
+// Синхронизация с базой данных
+// db.sequelize.sync({ alter: process.env.NODE_ENV === 'development' })
+//   .then(() => {
+//     console.log('База данных синхронизирована');
+//   })
+//   .catch(err => {
+//     console.error('Не удалось подключиться к базе данных:', err);
+//   }); 

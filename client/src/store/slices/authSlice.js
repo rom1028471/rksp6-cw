@@ -3,6 +3,7 @@ import authService from '../../services/authService';
 import apiClient from '../../services/apiClient';
 import playbackSyncService from '../../services/playbackSync.service';
 import { resetPlayer } from './playerSlice';
+import { persistor } from '../index';
 
 // Асинхронные действия (thunks)
 export const registerUser = createAsyncThunk(
@@ -273,6 +274,9 @@ export const performLogout = createAsyncThunk(
       // Диспатчим экшен logout из authSlice
       dispatch(logout());
       
+      // Очищаем персистентное хранилище
+      await persistor.purge();
+
       console.log('Выход из системы выполнен успешно');
       return null;
     } catch (error) {
